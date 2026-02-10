@@ -280,7 +280,7 @@ export function ChatInput({ onSendMessage, disabled, currentProvider, currentMod
 											</Button>
 										</TooltipTrigger>
 										<TooltipContent>
-											<p>图片偏好设置</p>
+											<p>{t("chat.imagePreferences")}</p>
 										</TooltipContent>
 									</Tooltip>
 								</TooltipProvider>
