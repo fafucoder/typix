@@ -1,7 +1,7 @@
 import { Button } from "@/app/components/ui/button";
 import { cn } from "@/app/lib/utils";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { Compass, Github, MessageSquare, Settings } from "lucide-react";
+import { Compass, MessageSquare, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface GlobalNavigationProps {
@@ -106,7 +106,6 @@ export function GlobalNavigation({ className }: GlobalNavigationProps) {
 						className="h-10 w-10 text-muted-foreground transition-all duration-200 hover:scale-105 hover:bg-accent hover:text-foreground"
 						onClick={() => window.open("https://github.com/monkeyWie/typix", "_blank")}
 					>
-						<Github className="size-6" />
 					</Button>
 				</div>
 			</div>

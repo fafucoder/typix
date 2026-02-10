@@ -3,12 +3,14 @@ import { inBrowser } from "@/server/lib/env";
 import { ServiceException } from "@/server/lib/exception";
 import type { AiProvider } from "../types/provider";
 import { default as cloudflare } from "./cloudflare";
+import { default as doubao } from "./doubao";
 import { default as fal } from "./fal";
 import { default as flux } from "./flux";
 import { default as google } from "./google";
 import { default as openAI } from "./openai";
+import { default as qwen } from "./qwen";
 
-export const AI_PROVIDERS = [cloudflare, google, openAI, flux, fal].map(enhancedProvider);
+export const AI_PROVIDERS = [qwen, doubao, cloudflare, google, openAI, flux, fal].map(enhancedProvider);
 
 export function getDefaultProvider() {
 	return AI_PROVIDERS[0]!;
