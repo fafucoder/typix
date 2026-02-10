@@ -45,13 +45,15 @@ We protect both your creativity and privacy.
 
 ## ⚡ Powered by Leading AI Models
 
-Integrated with cutting-edge AI models and services to provide the best image generation experience:
+Integrated with cutting-edge AI models and services to provide best image generation experience:
 
 - **Google** - Advanced AI models with cutting-edge image generation capabilities
 - **OpenAI** - Industry-leading AI technology
 - **Flux** - High-quality image generation models
 - **Fal** - Fast AI inference service
 - **Cloudflare** - Free AI model support
+- **Qwen** - Alibaba Qwen image generation models, supporting text-to-image and image-to-image
+- **Doubao** - Volcengine SeedDream models, supporting high-quality image generation
 
 More service providers and models are being integrated continuously.
 
