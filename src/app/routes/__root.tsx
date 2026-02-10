@@ -1,4 +1,3 @@
-import { DatabaseStudio } from "@/app/components/dev/DatabaseStudio";
 import { LoginModal } from "@/app/components/login/LoginModal";
 import { GlobalNavigation } from "@/app/components/navigation/GlobalNavigation";
 import { Toaster } from "@/app/components/ui/sonner";
@@ -239,7 +238,6 @@ function AppContent() {
 			</div>
 			<LoginModal />
 			<Toaster position="top-center" />
-			{process.env.NODE_ENV === "development" && <DatabaseStudio />}
 		</div>
 	);
 }

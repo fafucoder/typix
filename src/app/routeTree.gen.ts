@@ -15,6 +15,7 @@ import { Route as SettingsRouteImport } from './routes/settings/route'
 import { Route as IndexImport } from './routes/index'
 import { Route as SettingsIndexImport } from './routes/settings/index'
 import { Route as ChatIndexImport } from './routes/chat/index'
+import { Route as SettingsDatabaseImport } from './routes/settings/database'
 import { Route as SettingsCommonImport } from './routes/settings/common'
 import { Route as SettingsProviderRouteImport } from './routes/settings/provider/route'
 import { Route as SettingsProviderIndexImport } from './routes/settings/provider/index'
@@ -44,6 +45,12 @@ const ChatIndexRoute = ChatIndexImport.update({
   id: '/chat/',
   path: '/chat/',
   getParentRoute: () => rootRoute,
+} as any)
+
+const SettingsDatabaseRoute = SettingsDatabaseImport.update({
+  id: '/database',
+  path: '/database',
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
 
 const SettingsCommonRoute = SettingsCommonImport.update({
@@ -104,6 +111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsCommonImport
       parentRoute: typeof SettingsRouteImport
     }
+    '/settings/database': {
+      id: '/settings/database'
+      path: '/database'
+      fullPath: '/settings/database'
+      preLoaderRoute: typeof SettingsDatabaseImport
+      parentRoute: typeof SettingsRouteImport
+    }
     '/chat/': {
       id: '/chat/'
       path: '/chat'
@@ -155,12 +169,14 @@ const SettingsProviderRouteRouteWithChildren =
 interface SettingsRouteRouteChildren {
   SettingsProviderRouteRoute: typeof SettingsProviderRouteRouteWithChildren
   SettingsCommonRoute: typeof SettingsCommonRoute
+  SettingsDatabaseRoute: typeof SettingsDatabaseRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsProviderRouteRoute: SettingsProviderRouteRouteWithChildren,
   SettingsCommonRoute: SettingsCommonRoute,
+  SettingsDatabaseRoute: SettingsDatabaseRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 
@@ -173,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteRouteWithChildren
   '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
   '/settings/common': typeof SettingsCommonRoute
+  '/settings/database': typeof SettingsDatabaseRoute
   '/chat': typeof ChatIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
@@ -182,6 +199,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings/common': typeof SettingsCommonRoute
+  '/settings/database': typeof SettingsDatabaseRoute
   '/chat': typeof ChatIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
@@ -194,6 +212,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteRouteWithChildren
   '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
   '/settings/common': typeof SettingsCommonRoute
+  '/settings/database': typeof SettingsDatabaseRoute
   '/chat/': typeof ChatIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
@@ -207,6 +226,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/settings/provider'
     | '/settings/common'
+    | '/settings/database'
     | '/chat'
     | '/settings/'
     | '/settings/provider/$providerId'
@@ -215,6 +235,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/settings/common'
+    | '/settings/database'
     | '/chat'
     | '/settings'
     | '/settings/provider/$providerId'
@@ -225,6 +246,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/settings/provider'
     | '/settings/common'
+    | '/settings/database'
     | '/chat/'
     | '/settings/'
     | '/settings/provider/$providerId'
@@ -267,6 +289,7 @@ export const routeTree = rootRoute
       "children": [
         "/settings/provider",
         "/settings/common",
+        "/settings/database",
         "/settings/"
       ]
     },
@@ -280,6 +303,10 @@ export const routeTree = rootRoute
     },
     "/settings/common": {
       "filePath": "settings/common.tsx",
+      "parent": "/settings"
+    },
+    "/settings/database": {
+      "filePath": "settings/database.tsx",
       "parent": "/settings"
     },
     "/chat/": {
