@@ -179,6 +179,7 @@
     "changePassword": "Change Password",
     "accountSettings": "Account Settings",
     "loginToAccessAccountSettings": "Please login to access account settings",
+    "loginToManageYourAccount": "Log in to manage your account information",
     "accountInformation": "Account Information",
     "yourAccountDetails": "Your account details",
     "currentPassword": "Current Password",

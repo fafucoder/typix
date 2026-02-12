@@ -179,6 +179,7 @@
     "changePassword": "修改密码",
     "accountSettings": "账户设置",
     "loginToAccessAccountSettings": "请登录以访问账户设置",
+    "loginToManageYourAccount": "登录以管理您的账户信息",
     "accountInformation": "账户信息",
     "yourAccountDetails": "您的账户详情",
     "currentPassword": "当前密码",
