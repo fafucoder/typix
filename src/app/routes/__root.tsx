@@ -6,6 +6,7 @@ import { useSettingsService } from "@/app/hooks/useService";
 import { useThemeManager } from "@/app/hooks/useTheme";
 import { initDb } from "@/app/lib/db-client";
 import { initContext } from "@/server/service/context";
+import { mode } from "@/server/lib/env";
 import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -182,12 +183,13 @@ function RootComponent() {
 		}
 	}, [authLoading, hasAuthResolved]);
 
-	// Auto-open login modal if user is not logged in after auth resolves
+	// Conditionally open login modal based on environment
+	// Only auto-open login modal in client mode
 	useEffect(() => {
-		if (hasAuthResolved && !authLoading && !isLogin && !initError) {
+		if (hasAuthResolved && !authLoading && !isLogin && !initError && mode === "client") {
 			openLoginModal();
 		}
-	}, [hasAuthResolved, authLoading, isLogin, initError, openLoginModal]);
+	}, [hasAuthResolved, authLoading, isLogin, initError, openLoginModal, mode]);
 
 	// Initialize database and load settings on app startup
 	useEffect(() => {

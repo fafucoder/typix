@@ -197,26 +197,6 @@ export function ChatSidebar({
 					</ScrollArea>
 				</div>
 			</div>
-			{/* BOTTOM SECTION - Fixed height at bottom (User Profile or Login) */}
-			{mode !== "client" && (
-				<div className="mt-auto flex-shrink-0">
-					<div className="p-4">
-						{isAuthenticated ? (
-							/* Logged in user profile with UserMenu */
-							<UserMenu showLoginButton={false} className="w-full" />
-						) : (
-							/* Login prompt for non-authenticated users */
-							<div className="space-y-3">
-								<div className="text-center">
-									<p className="font-medium text-sm">{t("auth.welcomeMessage")}</p>
-									<p className="text-muted-foreground text-xs">{t("auth.loginToSave")}</p>
-								</div>
-								<LoginButton className="w-full" />
-							</div>
-						)}
-					</div>
-				</div>
-			)}
 		</div>
 	);
 	// Mobile: Use Sheet (drawer) - controlled by hooks
