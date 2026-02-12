@@ -6,7 +6,7 @@ import { sendEmail } from "./email";
 
 export interface AuthConfig {
 	email: {
-		verification: boolean; // Enable email verification
+		verification: boolean;
 		resend: {
 			apiKey: string;
 			from: string;
@@ -24,9 +24,43 @@ export interface AuthConfig {
 			clientSecret: string;
 		};
 	};
-	// Cookie domain for cross-subdomain sharing (e.g., .xxx.com)
 	cookieDomain?: string;
 }
+
+export const hashPassword = async (password: string): Promise<string> => {
+	const salt = crypto.getRandomValues(new Uint8Array(16));
+	const saltHex = Array.from(salt)
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
+
+	const key = scryptSync(password.normalize("NFKC"), saltHex, 64, {
+		N: 16384,
+		r: 16,
+		p: 1,
+		maxmem: 128 * 16384 * 16 * 2,
+	});
+
+	const keyHex = Array.from(key)
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
+	return `${saltHex}:${keyHex}`;
+};
+
+export const verifyPassword = async (hash: string, password: string): Promise<boolean> => {
+	const [saltHex, keyHex] = hash.split(":");
+
+	const targetKey = scryptSync(password.normalize("NFKC"), saltHex!, 64, {
+		N: 16384,
+		r: 16,
+		p: 1,
+		maxmem: 128 * 16384 * 16 * 2,
+	});
+
+	const targetKeyHex = Array.from(targetKey)
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
+	return targetKeyHex === keyHex;
+};
 
 export const createAuth = (db: any, config?: AuthConfig) =>
 	betterAuth({

@@ -99,6 +99,7 @@
     "sections": {
       "common": "General Settings",
       "provider": "AI Providers",
+      "account": "Account Settings",
       "database": "Database Management"
     },
     "provider": {
@@ -173,7 +174,27 @@
     "invalidEmailOrPassword": "Invalid email or password",
     "passwordTooShort": "Password too short",
     "passwordTooLong": "Password too long",
-    "userAlreadyExists": "User already exists with this email address"
+    "userAlreadyExists": "User already exists with this email address",
+    "logout": "Logout",
+    "changePassword": "Change Password",
+    "accountSettings": "Account Settings",
+    "loginToAccessAccountSettings": "Please login to access account settings",
+    "accountInformation": "Account Information",
+    "yourAccountDetails": "Your account details",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "currentPasswordRequired": "Please enter your current password",
+    "newPasswordRequired": "Please enter your new password",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "passwordRequirements": "Password should be between 6-72 characters",
+    "updatePassword": "Update Password",
+    "passwordUpdateFailed": "Password update failed",
+    "passwordUpdatedSuccessfully": "Password updated successfully",
+    "updateYourPassword": "Update your password to keep your account secure",
+    "accountNotFound": "Account not found",
+    "socialLoginCannotChangePassword": "This account uses social login and cannot change password",
+    "currentPasswordIncorrect": "Current password is incorrect"
   },
   "user": {
     "avatar": "User avatar",

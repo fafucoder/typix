@@ -17,6 +17,7 @@ import { Route as SettingsIndexImport } from './routes/settings/index'
 import { Route as ChatIndexImport } from './routes/chat/index'
 import { Route as SettingsDatabaseImport } from './routes/settings/database'
 import { Route as SettingsCommonImport } from './routes/settings/common'
+import { Route as SettingsAccountImport } from './routes/settings/account'
 import { Route as SettingsProviderRouteImport } from './routes/settings/provider/route'
 import { Route as SettingsProviderIndexImport } from './routes/settings/provider/index'
 import { Route as SettingsProviderProviderIdImport } from './routes/settings/provider/$providerId'
@@ -56,6 +57,12 @@ const SettingsDatabaseRoute = SettingsDatabaseImport.update({
 const SettingsCommonRoute = SettingsCommonImport.update({
   id: '/common',
   path: '/common',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+
+const SettingsAccountRoute = SettingsAccountImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
 
@@ -102,6 +109,13 @@ declare module '@tanstack/react-router' {
       path: '/provider'
       fullPath: '/settings/provider'
       preLoaderRoute: typeof SettingsProviderRouteImport
+      parentRoute: typeof SettingsRouteImport
+    }
+    '/settings/account': {
+      id: '/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof SettingsAccountImport
       parentRoute: typeof SettingsRouteImport
     }
     '/settings/common': {
@@ -168,6 +182,7 @@ const SettingsProviderRouteRouteWithChildren =
 
 interface SettingsRouteRouteChildren {
   SettingsProviderRouteRoute: typeof SettingsProviderRouteRouteWithChildren
+  SettingsAccountRoute: typeof SettingsAccountRoute
   SettingsCommonRoute: typeof SettingsCommonRoute
   SettingsDatabaseRoute: typeof SettingsDatabaseRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -175,6 +190,7 @@ interface SettingsRouteRouteChildren {
 
 const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsProviderRouteRoute: SettingsProviderRouteRouteWithChildren,
+  SettingsAccountRoute: SettingsAccountRoute,
   SettingsCommonRoute: SettingsCommonRoute,
   SettingsDatabaseRoute: SettingsDatabaseRoute,
   SettingsIndexRoute: SettingsIndexRoute,
@@ -188,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
+  '/settings/account': typeof SettingsAccountRoute
   '/settings/common': typeof SettingsCommonRoute
   '/settings/database': typeof SettingsDatabaseRoute
   '/chat': typeof ChatIndexRoute
@@ -198,6 +215,7 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/settings/account': typeof SettingsAccountRoute
   '/settings/common': typeof SettingsCommonRoute
   '/settings/database': typeof SettingsDatabaseRoute
   '/chat': typeof ChatIndexRoute
@@ -211,6 +229,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
+  '/settings/account': typeof SettingsAccountRoute
   '/settings/common': typeof SettingsCommonRoute
   '/settings/database': typeof SettingsDatabaseRoute
   '/chat/': typeof ChatIndexRoute
@@ -225,6 +244,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/settings/provider'
+    | '/settings/account'
     | '/settings/common'
     | '/settings/database'
     | '/chat'
@@ -234,6 +254,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/settings/account'
     | '/settings/common'
     | '/settings/database'
     | '/chat'
@@ -245,6 +266,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/settings/provider'
+    | '/settings/account'
     | '/settings/common'
     | '/settings/database'
     | '/chat/'
@@ -288,6 +310,7 @@ export const routeTree = rootRoute
       "filePath": "settings/route.tsx",
       "children": [
         "/settings/provider",
+        "/settings/account",
         "/settings/common",
         "/settings/database",
         "/settings/"
@@ -300,6 +323,10 @@ export const routeTree = rootRoute
         "/settings/provider/$providerId",
         "/settings/provider/"
       ]
+    },
+    "/settings/account": {
+      "filePath": "settings/account.tsx",
+      "parent": "/settings"
     },
     "/settings/common": {
       "filePath": "settings/common.tsx",

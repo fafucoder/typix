@@ -16,8 +16,8 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-	const { theme, themeColor, language, setTheme, setThemeColor, setLanguage, setIsMobile } = useUIStore();
-	const { isLoading: authLoading } = useAuth();
+	const { theme, themeColor, language, setTheme, setThemeColor, setLanguage, setIsMobile, openLoginModal } = useUIStore();
+	const { isLoading: authLoading, isLogin } = useAuth();
 	const [isInitialized, setIsInitialized] = useState(false);
 	const [initError, setInitError] = useState<string | null>(null);
 	const [hasAuthResolved, setHasAuthResolved] = useState(false);
@@ -181,6 +181,13 @@ function RootComponent() {
 			setHasAuthResolved(true);
 		}
 	}, [authLoading, hasAuthResolved]);
+
+	// Auto-open login modal if user is not logged in after auth resolves
+	useEffect(() => {
+		if (hasAuthResolved && !authLoading && !isLogin && !initError) {
+			openLoginModal();
+		}
+	}, [hasAuthResolved, authLoading, isLogin, initError, openLoginModal]);
 
 	// Initialize database and load settings on app startup
 	useEffect(() => {

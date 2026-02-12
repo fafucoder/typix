@@ -99,6 +99,7 @@
     "sections": {
       "common": "通用设置",
       "provider": "AI提供商",
+      "account": "账户设置",
       "database": "数据库管理"
     },
     "provider": {
@@ -173,7 +174,27 @@
     "invalidEmailOrPassword": "邮箱或密码错误",
     "passwordTooShort": "密码过短",
     "passwordTooLong": "密码过长",
-    "userAlreadyExists": "该邮箱地址已被注册"
+    "userAlreadyExists": "该邮箱地址已被注册",
+    "logout": "退出登录",
+    "changePassword": "修改密码",
+    "accountSettings": "账户设置",
+    "loginToAccessAccountSettings": "请登录以访问账户设置",
+    "accountInformation": "账户信息",
+    "yourAccountDetails": "您的账户详情",
+    "currentPassword": "当前密码",
+    "newPassword": "新密码",
+    "confirmNewPassword": "确认新密码",
+    "currentPasswordRequired": "请输入当前密码",
+    "newPasswordRequired": "请输入新密码",
+    "passwordsDoNotMatch": "两次输入的密码不一致",
+    "passwordRequirements": "密码长度应在6-72个字符之间",
+    "updatePassword": "更新密码",
+    "passwordUpdateFailed": "密码更新失败",
+    "passwordUpdatedSuccessfully": "密码已成功更新",
+    "updateYourPassword": "更新您的密码，确保账户安全",
+    "accountNotFound": "账户不存在",
+    "socialLoginCannotChangePassword": "该账户使用社交登录，无法修改密码",
+    "currentPasswordIncorrect": "当前密码不正确"
   },
   "user": {
     "avatar": "用户头像",

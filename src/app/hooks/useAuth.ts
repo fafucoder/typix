@@ -1,5 +1,4 @@
 import { authClient } from "@/app/lib/auth-client";
-import { mode } from "@/server/lib/env";
 
 function useAuthWrap() {
 	const session = authClient.useSession();
@@ -22,15 +21,7 @@ type UseAuthReturnType = ReturnType<typeof useAuthWrap>;
 
 // Custom hook that wraps BetterAuth's useSession
 export function useAuth() {
-	if (mode === "client") {
-		// In client mode, do nothing
-		return {
-			user: null,
-			isLogin: false,
-			isLoading: false,
-			error: null,
-		} as UseAuthReturnType;
-	}
-
+	// Always use the auth wrap function to get real authentication status
+	// This ensures consistent behavior across all modes
 	return useAuthWrap();
 }
