@@ -202,7 +202,10 @@
     "updateYourPassword": "Update your password to keep your account secure",
     "accountNotFound": "Account not found",
     "socialLoginCannotChangePassword": "This account uses social login and cannot change password",
-    "currentPasswordIncorrect": "Current password is incorrect"
+    "currentPasswordIncorrect": "Current password is incorrect",
+    "role": "User Role",
+    "roleAdmin": "Administrator",
+    "roleUser": "Regular User"
   },
   "user": {
     "avatar": "User avatar",

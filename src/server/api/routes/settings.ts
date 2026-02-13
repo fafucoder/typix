@@ -42,6 +42,10 @@ const app = new Hono<Env>()
 				message: error.message || "Failed to update password",
 			}, 500);
 		}
+	})
+	.post("/getUserInfo", async (c) => {
+		const user = c.var.user!;
+		return c.json(ok({ user }));
 	});
 
 export default app;

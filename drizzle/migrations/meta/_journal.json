@@ -15,6 +15,13 @@
       "when": 1770951015040,
       "tag": "0001_third_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1770963050155,
+      "tag": "0002_cooing_gamora",
+      "breakpoints": true
     }
   ]
 }

@@ -202,7 +202,10 @@
     "updateYourPassword": "更新您的密码，确保账户安全",
     "accountNotFound": "账户不存在",
     "socialLoginCannotChangePassword": "该账户使用社交登录，无法修改密码",
-    "currentPasswordIncorrect": "当前密码不正确"
+    "currentPasswordIncorrect": "当前密码不正确",
+    "role": "用户角色",
+    "roleAdmin": "管理员",
+    "roleUser": "普通用户"
   },
   "user": {
     "avatar": "用户头像",

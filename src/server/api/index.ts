@@ -4,6 +4,8 @@ import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { Resend } from "resend";
 import { createDb } from "../db";
+import { user } from "../db/schemas/auth";
+import { eq } from "drizzle-orm";
 import { type AuthConfig, createAuth } from "../lib/auth";
 import { ServiceException } from "../lib/exception";
 import { initContext } from "../service/context";
@@ -64,20 +66,37 @@ const app = factory.createApp();
 app.use(logger());
 
 app.use("*", async (c, next) => {
-	const session = await c.var.auth.api.getSession({
-		headers: c.req.raw.headers,
-	});
+		try {
+			const session = await c.var.auth.api.getSession({
+				headers: c.req.raw.headers,
+			});
 
-	if (!session) {
-		c.set("user", null);
-		c.set("session", null);
+			if (!session) {
+				c.set("user", null);
+				c.set("session", null);
+				return await next();
+			}
+
+			// Get complete user information from database including role
+			const db = c.var.db;
+			const users = await db.select().from(user).where(eq(user.id, session.user.id)).limit(1);
+			
+			if (users.length > 0) {
+				// Use the complete user object with role
+				c.set("user", users[0]);
+			} else {
+				// Fallback to session user if not found
+				c.set("user", session.user);
+			}
+			
+			c.set("session", session.session);
+		} catch (error) {
+			console.error("Session error:", error);
+			c.set("user", null);
+			c.set("session", null);
+		}
 		return await next();
-	}
-
-	c.set("user", session.user);
-	c.set("session", session.session);
-	return await next();
-});
+	});
 
 app.on(["POST", "GET"], ["/api/auth/*"], (c) => c.var.auth.handler(c.req.raw));
 
