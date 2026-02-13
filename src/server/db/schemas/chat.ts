@@ -78,6 +78,7 @@ export const messageGenerations = sqliteTable("message_generations", {
 	fileIds: text({ mode: "json" }), // Array of file IDs if applicable
 	errorReason: text({ enum: errorReason }), // Reason for failure if status is "failed"
 	generationTime: integer({ mode: "number" }), // Time taken in milliseconds
+	tokenCount: integer({ mode: "number" }), // Token count used for generation
 	cost: real(), // Cost of generation if applicable
 	...metaFields,
 });

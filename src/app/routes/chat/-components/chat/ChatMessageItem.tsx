@@ -390,7 +390,7 @@ export function ChatMessageItem({
 						<div className={cn("mt-2", isUser ? "flex justify-end" : "flex justify-start")}>
 							<div className="w-full max-w-2xl">
 								{currentMessageImageUrls.length === 1 ? (
-									<div className="flex justify-center">
+									<div className="flex items-end justify-center gap-2 group">
 										<div className="relative">
 											{/* Message Actions for single image */}
 											{isHovered && (
@@ -431,53 +431,75 @@ export function ChatMessageItem({
 												/>
 											</button>
 										</div>
-									</div>
-								) : (
-									<div className="relative">
-										{/* Message Actions for multiple images */}
-										{isHovered && (
-											<MessageActions
-												messageId={message.id}
-												messageType={message.type}
-												content={message.content}
-												imageUrls={currentMessageImageUrls}
-												isUser={isUser}
-												onDelete={onDelete}
-												className={cn(
-													"-top-2 absolute z-10",
-													// Desktop positioning
-													isUser ? "sm:-left-2 sm:-translate-x-full" : "sm:-right-2 sm:translate-x-full",
-													// Mobile positioning - show inside content area
-													isUser ? "right-2 sm:right-auto" : "left-2 sm:left-auto",
+										{message.generation && message.generation.status === "completed" && (
+											<div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 rounded-lg border border-border/50 bg-background/80 p-1 shadow-lg backdrop-blur-sm text-xs">
+												{message.generation.generationTime && (
+													<div className="flex items-center gap-1">
+														<span>⏱</span>
+														<span>{(message.generation.generationTime / 1000).toFixed(1)}s</span>
+													</div>
 												)}
-											/>
+											</div>
 										)}
-										<div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
-											{currentMessageImageUrls.map((imageUrl, index) => (
-												<button
-													key={`${message.id}-${imageUrl}-${index}`}
-													type="button"
-													className="block rounded-xl transition-transform duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-													onClick={() => {
-														if (isCurrentImageSuccessful && allImages.length > 0) {
-															const imageIndex = allImages.findIndex((img) => img.src === imageUrl);
-															setCurrentImageIndex(imageIndex >= 0 ? imageIndex : 0);
-															setIsLightboxOpen(true);
-														}
-													}}
-													aria-label={t("chat.clickToEnlarge")}
-													disabled={!isCurrentImageSuccessful}
-												>
-													<img
-														src={imageUrl}
-														alt={t("chat.generatedOrUploaded")}
-														className="aspect-square h-auto w-full rounded-xl object-cover shadow-lg"
-														loading="lazy"
-													/>
-												</button>
-											))}
+								</div>
+								) : (
+									<div className="flex items-end gap-2 group">
+										<div>
+											{/* Message Actions for multiple images */}
+											{isHovered && (
+												<MessageActions
+													messageId={message.id}
+													messageType={message.type}
+													content={message.content}
+													imageUrls={currentMessageImageUrls}
+													isUser={isUser}
+													onDelete={onDelete}
+													className={cn(
+														"absolute top-1 z-10",
+														// Desktop positioning
+														isUser ? "sm:-left-2 sm:-translate-x-full" : "sm:-right-2 sm:translate-x-full",
+														// Mobile positioning - show inside content area
+														isUser ? "right-2 sm:right-auto" : "left-2 sm:left-auto",
+													)}
+												/>
+											)}
+											<div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
+												{currentMessageImageUrls.map((imageUrl, index) => (
+													<button
+														key={`${message.id}-${imageUrl}-${index}`}
+														type="button"
+														className="block rounded-xl transition-transform duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+														onClick={() => {
+															if (isCurrentImageSuccessful && allImages.length > 0) {
+																const imageIndex = allImages.findIndex((img) => img.src === imageUrl);
+																setCurrentImageIndex(imageIndex >= 0 ? imageIndex : 0);
+																setIsLightboxOpen(true);
+															}
+														}}
+														aria-label={t("chat.clickToEnlarge")}
+														disabled={!isCurrentImageSuccessful}
+													>
+														<img
+															src={imageUrl}
+															alt={t("chat.generatedOrUploaded")}
+															className="aspect-square h-auto w-full rounded-xl object-cover shadow-lg"
+															loading="lazy"
+														/>
+													</button>
+												))}
+											</div>
 										</div>
-									</div>
+										{message.generation && message.generation.status === "completed" && (
+											<div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 rounded-lg border border-border/50 bg-background/80 p-1 shadow-lg backdrop-blur-sm text-xs">
+												{message.generation.generationTime && (
+													<div className="flex items-center gap-1">
+														<span>⏱</span>
+														<span>{(message.generation.generationTime / 1000).toFixed(1)}s</span>
+													</div>
+												)}
+											</div>
+										)}
+								</div>
 								)}
 							</div>
 						</div>
