@@ -4,6 +4,8 @@
     "cancel": "取消",
     "delete": "删除",
     "edit": "编辑",
+    "rename": "重命名",
+    "confirm": "确认",
     "create": "创建",
     "loading": "加载中...",
     "error": "错误",
@@ -20,6 +22,9 @@
   "chat": {
     "newChat": "新建创作",
     "newChatTitle": "新创作",
+    "renameChat": "重命名创作",
+    "renameChatDescription": "请输入新的创作名称",
+    "enterNewTitle": "输入新名称",
     "typeMessage": "输入生成图片，按 Enter 发送 • Shift+Enter 换行",
     "sendMessage": "发送消息",
     "uploadForImageToImage": "上传图片进行图生图",
@@ -58,7 +63,9 @@
       "default": "发送消息时发生错误",
       "createChat": "创建对话失败 - 没有可用的AI模型",
       "noModel": "没有可用的AI模型 - 请先配置提供商",
-      "createNewChat": "创建新对话失败 - 请选择提供商和模型"
+      "createNewChat": "创建新对话失败 - 请选择提供商和模型",
+      "deleteChat": "删除创作失败",
+      "renameChat": "重命名创作失败"
     },
     "generation": {
       "failed": "生成失败",

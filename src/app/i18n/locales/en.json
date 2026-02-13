@@ -4,6 +4,8 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
+    "rename": "Rename",
+    "confirm": "Confirm",
     "create": "Create",
     "loading": "Loading...",
     "error": "Error",
@@ -20,6 +22,9 @@
   "chat": {
     "newChat": "New Creation",
     "newChatTitle": "New Creation",
+    "renameChat": "Rename Creation",
+    "renameChatDescription": "Please enter a new name for this creation",
+    "enterNewTitle": "Enter new title",
     "typeMessage": "Type to generate, press Enter to send • Shift+Enter for new line",
     "sendMessage": "Send message",
     "uploadForImageToImage": "Upload image for image-to-image generation",
@@ -58,7 +63,9 @@
       "default": "An error occurred while sending the message",
       "createChat": "Failed to create chat - no available AI models",
       "noModel": "No available AI models - please configure providers first",
-      "createNewChat": "Failed to create new chat - please select a provider and model"
+      "createNewChat": "Failed to create new chat - please select a provider and model",
+      "deleteChat": "Failed to delete creation",
+      "renameChat": "Failed to rename creation"
     },
     "generation": {
       "failed": "Generation failed",

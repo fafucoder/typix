@@ -136,13 +136,35 @@ function ChatPageContent() {
 
 	// Handle chat deletion with URL cleanup
 	const handleDeleteChat = async (chatIdToDelete: string) => {
-		await deleteChat(chatIdToDelete);
+		try {
+			await deleteChat(chatIdToDelete);
 
-		// If we deleted the current chat, clear the URL parameter
-		if (currentChatId === chatIdToDelete) {
-			navigate({
-				search: {},
-				replace: true,
+			// If we deleted the current chat, clear the URL parameter
+			if (currentChatId === chatIdToDelete) {
+				navigate({
+					search: {},
+					replace: true,
+				});
+			}
+		} catch (error) {
+			console.error("Error deleting chat:", error);
+			toast({
+				title: t("chat.error.title", "Error"),
+				description: t("chat.error.deleteChat", "Failed to delete chat"),
+				variant: "destructive",
+			});
+		}
+	};
+
+	const handleRenameChat = async (chatId: string, newTitle: string) => {
+		try {
+			await updateChat(chatId, { title: newTitle });
+		} catch (error) {
+			console.error("Error renaming chat:", error);
+			toast({
+				title: t("chat.error.title", "Error"),
+				description: t("chat.error.renameChat", "Failed to rename chat"),
+				variant: "destructive",
 			});
 		}
 	};
@@ -200,6 +222,7 @@ function ChatPageContent() {
 				onCreateChat={handleCreateChat}
 				onSwitchChat={handleSwitchChat}
 				onDeleteChat={handleDeleteChat}
+				onRenameChat={handleRenameChat}
 			/>
 			{/* Main chat content area - margin adjustment for slide animation */}
 			<div

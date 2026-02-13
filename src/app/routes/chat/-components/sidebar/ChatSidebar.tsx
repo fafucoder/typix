@@ -2,6 +2,14 @@ import { LoginButton } from "@/app/components/login/LoginButton";
 import { UserMenu } from "@/app/components/navigation/UserMenu";
 import { Button } from "@/app/components/ui/button";
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/app/components/ui/dialog";
+import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -13,7 +21,7 @@ import { useAuth } from "@/app/hooks/useAuth";
 import { cn } from "@/app/lib/utils";
 import { mode } from "@/server/lib/env";
 import type { chatService } from "@/server/service/chat";
-import { MoreVertical, Palette, Plus, Trash2 } from "lucide-react";
+import { MoreVertical, Palette, Plus, Trash2, Edit2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSidebar } from "../../-hooks/useChatSidebar";
@@ -36,6 +44,7 @@ interface ChatSidebarProps {
 	onCreateChat: () => void;
 	onSwitchChat: (chatId: string) => void;
 	onDeleteChat: (chatId: string) => void;
+	onRenameChat?: (chatId: string, newTitle: string) => void;
 }
 
 export function ChatSidebar({
@@ -45,13 +54,16 @@ export function ChatSidebar({
 	onCreateChat,
 	onSwitchChat,
 	onDeleteChat,
+	onRenameChat,
 }: ChatSidebarProps) {
 	const { t } = useTranslation();
 	const { isOpen, toggle, setOpen, isMobile } = useSidebar();
 	const { isLogin: isAuthenticated } = useAuth();
 
-	// State to control when to show the expand button (after sidebar is fully hidden)
 	const [showExpandButton, setShowExpandButton] = useState(!isOpen);
+	const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+	const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
+	const [newChatTitle, setNewChatTitle] = useState("");
 
 	// Handle expand button visibility with delay
 	useEffect(() => {
@@ -67,7 +79,6 @@ export function ChatSidebar({
 		}
 	}, [isOpen]);
 	const formatDate = (date: Date) => {
-		// Check if date is valid
 		if (!date || Number.isNaN(date.getTime())) {
 			return t("common.unknown");
 		}
@@ -76,12 +87,32 @@ export function ChatSidebar({
 		const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 
 		if (diffInDays === 0) {
-			// Show time for today's chats
 			return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 		}
 		if (diffInDays === 1) return t("common.yesterday");
 		if (diffInDays < 7) return `${diffInDays} ${t("common.daysAgo")}`;
 		return date.toLocaleDateString();
+	};
+
+	const handleRenameClick = (chatId: string, currentTitle: string) => {
+		setRenamingChatId(chatId);
+		setNewChatTitle(currentTitle);
+		setRenameDialogOpen(true);
+	};
+
+	const handleRenameConfirm = () => {
+		if (renamingChatId && newChatTitle.trim() && onRenameChat) {
+			onRenameChat(renamingChatId, newChatTitle.trim());
+			setRenameDialogOpen(false);
+			setRenamingChatId(null);
+			setNewChatTitle("");
+		}
+	};
+
+	const handleRenameCancel = () => {
+		setRenameDialogOpen(false);
+		setRenamingChatId(null);
+		setNewChatTitle("");
 	};
 
 	const closeSidebar = () => {
@@ -177,7 +208,16 @@ export function ChatSidebar({
 													<MoreVertical className="h-3.5 w-3.5" />
 												</Button>
 											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end" className="w-32">
+											<DropdownMenuContent align="end" className="w-40">
+												<DropdownMenuItem
+													onClick={(e) => {
+														e.stopPropagation();
+														handleRenameClick(chat.id, chat.title);
+													}}
+												>
+													<Edit2 className="mr-2 h-4 w-4" />
+													{t("common.rename")}
+												</DropdownMenuItem>
 												<DropdownMenuItem
 													onClick={(e) => {
 														e.stopPropagation();
@@ -199,14 +239,50 @@ export function ChatSidebar({
 			</div>
 		</div>
 	);
+
 	// Mobile: Use Sheet (drawer) - controlled by hooks
 	if (isMobile) {
 		return (
-			<Sheet open={isOpen} onOpenChange={setOpen}>
-				<SheetContent side="left" className="w-80 bg-background/95 p-0 backdrop-blur-lg [&>button]:z-50">
-					<SidebarContent />
-				</SheetContent>
-			</Sheet>
+			<>
+				<Sheet open={isOpen} onOpenChange={setOpen}>
+					<SheetContent side="left" className="w-80 bg-background/95 p-0 backdrop-blur-lg [&>button]:z-50">
+						<SidebarContent />
+					</SheetContent>
+				</Sheet>
+				<Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+					<DialogContent className="sm:max-w-md">
+						<DialogHeader>
+							<DialogTitle>{t("chat.renameChat")}</DialogTitle>
+							<DialogDescription>{t("chat.renameChatDescription")}</DialogDescription>
+						</DialogHeader>
+						<div className="py-4">
+							<input
+								type="text"
+								value={newChatTitle}
+								onChange={(e) => setNewChatTitle(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") {
+										handleRenameConfirm();
+									} else if (e.key === "Escape") {
+										handleRenameCancel();
+									}
+								}}
+								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+								placeholder={t("chat.enterNewTitle")}
+								autoFocus
+							/>
+						</div>
+						<DialogFooter>
+							<Button variant="outline" onClick={handleRenameCancel}>
+								{t("common.cancel")}
+							</Button>
+							<Button onClick={handleRenameConfirm} disabled={!newChatTitle.trim()}>
+								{t("common.confirm")}
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+			</>
 		);
 	} // Desktop: Slide-in/out animation - sidebar slides completely off screen when collapsed
 	return (
@@ -227,10 +303,41 @@ export function ChatSidebar({
 			</div>
 			{/* Floating expand button - only visible when collapsed and after animation */}
 			{!isOpen && showExpandButton && (
-				<div className="fade-in-0 fixed top-4 left-20 z-40 animate-in duration-200">
-					<ChatSidebarTrigger useDesktopIcons={true} className="h-10 w-10 transition-transform hover:scale-110" />
-				</div>
+				<ChatSidebarTrigger useDesktopIcons={true} className="fixed top-20 left-16 z-40" />
 			)}
+			<Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>{t("chat.renameChat")}</DialogTitle>
+						<DialogDescription>{t("chat.renameChatDescription")}</DialogDescription>
+					</DialogHeader>
+					<div className="py-4">
+						<input
+							type="text"
+							value={newChatTitle}
+							onChange={(e) => setNewChatTitle(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									handleRenameConfirm();
+								} else if (e.key === "Escape") {
+									handleRenameCancel();
+								}
+							}}
+							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+							placeholder={t("chat.enterNewTitle")}
+							autoFocus
+						/>
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={handleRenameCancel}>
+							{t("common.cancel")}
+						</Button>
+						<Button onClick={handleRenameConfirm} disabled={!newChatTitle.trim()}>
+							{t("common.confirm")}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</>
 	);
 }
