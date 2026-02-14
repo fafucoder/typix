@@ -194,7 +194,7 @@ function AccountSettingsPage() {
 								<Input
 									id="role"
 									type="text"
-									value={t("auth.roleAdmin")}
+									value={"role" in user && user.role === "admin" ? t("auth.roleAdmin") : t("auth.roleUser")}
 									disabled
 									className="border-none bg-transparent focus:ring-0"
 								/>

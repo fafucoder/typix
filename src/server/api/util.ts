@@ -6,6 +6,24 @@ import type { Code } from "../lib/exception";
 
 type Auth = ReturnType<typeof createAuth>;
 
+// 由于 Auth["$Infer"]["Session"]["user"] 是从 better-auth 库推断的类型
+// 我们无法直接修改它的定义，只能通过扩展的方式添加额外属性
+type UserWithRole = {
+	// 基础用户属性（与 Auth["$Infer"]["Session"]["user"] 保持一致）
+	id: string;
+	email: string;
+	emailVerified: boolean;
+	name: string;
+	createdAt: Date;
+	updatedAt: Date;
+	image?: string | null;
+	
+	// 扩展属性
+	role?: "admin" | "user";
+	inviteCode?: string | null;
+	parentUserId?: string | null;
+};
+
 export type Env = {
 	Bindings: {
 		DB: D1Database;
@@ -26,7 +44,7 @@ export type Env = {
 	Variables: {
 		db: DrizzleDb;
 		auth: Auth;
-		user: Auth["$Infer"]["Session"]["user"] | null;
+		user: UserWithRole | null;
 		session: Auth["$Infer"]["Session"]["session"] | null;
 	};
 };

@@ -81,7 +81,7 @@ app.use("*", async (c, next) => {
 			const db = c.var.db;
 			const users = await db.select().from(user).where(eq(user.id, session.user.id)).limit(1);
 			
-			if (users.length > 0) {
+			if (users.length > 0 && users[0]) {
 				// Use the complete user object with role
 				c.set("user", users[0]);
 			} else {

@@ -11,7 +11,7 @@ export const user = sqliteTable("user", {
 		.$defaultFn(() => false)
 		.notNull(),
 	image: text("image"),
-	role: text({ enum: userRoles }).default("user").notNull(),
+	role: text({ enum: userRoles }).$defaultFn(() =>"user").notNull(),
 	createdAt: integer("created_at", { mode: "timestamp" })
 		.$defaultFn(() => /* @__PURE__ */ new Date())
 		.notNull(),
