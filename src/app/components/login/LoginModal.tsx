@@ -32,13 +32,14 @@ export function LoginModal() {
 		name: "",
 		email: "",
 		password: "",
+		inviteCode: "",
 	});
 
 	// Check if email verification is enabled via environment variable
 	const isEmailVerificationEnabled = import.meta.env.AUTH_EMAIL_VERIFICATION_ENABLED === "true";
 
 	const resetAllState = () => {
-		setFormData({ name: "", email: "", password: "" });
+		setFormData({ name: "", email: "", password: "", inviteCode: "" });
 		setShowPassword(false);
 		setModalState("login");
 		setError(null);
@@ -86,7 +87,7 @@ export function LoginModal() {
 	// Toggle between login and register mode
 	const toggleMode = () => {
 		setModalState(modalState === "login" ? "register" : "login");
-		setFormData({ name: "", email: "", password: "" });
+		setFormData({ name: "", email: "", password: "", inviteCode: "" });
 		setShowPassword(false);
 		setError(null);
 		setOtpCode("");
@@ -140,10 +141,17 @@ export function LoginModal() {
 				name: formData.name,
 				email: formData.email,
 				password: formData.password,
+				...(formData.inviteCode ? { inviteCode: formData.inviteCode } : {}),
 			});
 
 			if (response.error) {
 				const errorCode = response.error.code;
+
+				const errorMessage = response.error.message;
+				if (errorMessage && errorMessage.includes("INVALID_INVITE_CODE")) {
+					setError(t("auth.invalidInviteCode"));
+					return;
+				}
 
 				// Handle specific error types with localized messages based on error codes
 				switch (errorCode) {
@@ -445,6 +453,23 @@ export function LoginModal() {
 								</div>
 							</div>
 
+							{modalState === "register" && (
+								<div className="space-y-2">
+									<Label htmlFor="inviteCode">{t("auth.enterInviteCode")}</Label>
+									<div className="relative">
+										<Shield className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+										<Input
+											id="inviteCode"
+											type="text"
+											placeholder={t("auth.inviteCodePlaceholder")}
+											value={formData.inviteCode}
+											onChange={(e) => handleInputChange("inviteCode", e.target.value)}
+											className="pl-10"
+										/>
+									</div>
+								</div>
+							)}
+
 							<Button type="submit" className="w-full" size="lg" disabled={isLoading}>
 								{isLoading ? (
 									<div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -470,13 +495,15 @@ export function LoginModal() {
 								</div>
 							</div>
 
-							<div className="text-center">
-								<p className="text-muted-foreground text-sm">
-									{modalState === "login" ? t("auth.noAccount") : t("auth.hasAccount")}
-								</p>
-								<Button type="button" variant="link" className="h-auto p-0 font-semibold" onClick={toggleMode}>
-									{modalState === "login" ? t("auth.signUpNow") : t("auth.goToLogin")}
-								</Button>
+							<div className="text-center flex flex-col items-center space-y-1">
+								<div className="flex items-center justify-center gap-1">
+									<span className="text-muted-foreground text-sm">
+										{modalState === "login" ? t("auth.noAccount") : t("auth.hasAccount")}
+									</span>
+									<Button type="button" variant="link" className="h-auto p-0 font-semibold" onClick={toggleMode}>
+										{modalState === "login" ? t("auth.signUpNow") : t("auth.goToLogin")}
+									</Button>
+								</div>
 							</div>
 						</>
 					)}

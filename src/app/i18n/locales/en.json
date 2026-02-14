@@ -205,7 +205,13 @@
     "currentPasswordIncorrect": "Current password is incorrect",
     "role": "User Role",
     "roleAdmin": "Administrator",
-    "roleUser": "Regular User"
+    "roleUser": "Regular User",
+    "enterInviteCode": "Enter Invite Code",
+    "inviteCodePlaceholder": "Invite Code (Optional)",
+    "inviteCode": "Invite Code",
+    "inviteCodeCopied": "Invite code copied",
+    "copyFailed": "Failed to copy",
+    "invalidInviteCode": "Invalid invite code"
   },
   "user": {
     "avatar": "User avatar",

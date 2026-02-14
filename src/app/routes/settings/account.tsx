@@ -5,7 +5,7 @@ import { Label } from "@/app/components/ui/label";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useToast } from "@/app/hooks/useToast";
 import { useUIStore } from "@/app/stores";
-import { Eye, EyeOff, Key, User, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Key, User, Mail, Lock, Copy, Check } from "lucide-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -35,6 +35,7 @@ function AccountSettingsPage() {
 	});
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [copied, setCopied] = useState(false);
 
 	// Handle password change
 	const handlePasswordChange = async (e: React.FormEvent) => {
@@ -125,6 +126,21 @@ function AccountSettingsPage() {
 		openLoginModal();
 	};
 
+	// Handle copy invite code
+	const handleCopyInviteCode = async () => {
+		if (!user.inviteCode) return;
+
+		try {
+			await navigator.clipboard.writeText(user.inviteCode);
+			setCopied(true);
+			toast({ title: t("auth.inviteCodeCopied"), variant: "default" });
+			setTimeout(() => setCopied(false), 2000);
+		} catch (error) {
+			console.error("Failed to copy invite code:", error);
+			toast({ title: t("auth.copyFailed"), variant: "destructive" });
+		}
+	};
+
 	// If user is not logged in, show login prompt
 	if (!isLogin || !user) {
 		return (
@@ -198,6 +214,30 @@ function AccountSettingsPage() {
 									disabled
 									className="border-none bg-transparent focus:ring-0"
 								/>
+							</div>
+						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="inviteCode" className="text-xs font-medium">{t("auth.inviteCode")}</Label>
+							<div className="flex items-center gap-2 border border-input rounded-lg p-2 bg-background">
+								<Key className="h-4 w-4 text-muted-foreground" />
+								<Input
+									id="inviteCode"
+									type="text"
+									value={user.inviteCode || ""}
+									disabled
+									className="border-none bg-transparent focus:ring-0"
+								/>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									className="h-8 w-8 p-0"
+									onClick={handleCopyInviteCode}
+									disabled={!user.inviteCode}
+								>
+									{copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+								</Button>
 							</div>
 						</div>
 					</CardContent>

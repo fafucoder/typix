@@ -34,11 +34,15 @@ CREATE TABLE `user` (
 	`email` text NOT NULL,
 	`email_verified` integer NOT NULL,
 	`image` text,
+	`role` text DEFAULT 'user' NOT NULL,
+	`invite_code` text,
+	`parent_user_id` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);--> statement-breakpoint
+CREATE UNIQUE INDEX `user_invite_code_unique` ON `user` (`invite_code`);--> statement-breakpoint
 CREATE TABLE `verification` (
 	`id` text PRIMARY KEY NOT NULL,
 	`identifier` text NOT NULL,

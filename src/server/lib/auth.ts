@@ -1,8 +1,11 @@
-import { scryptSync } from "node:crypto";
+import { scryptSync, getRandomValues } from "node:crypto";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { sendEmail } from "./email";
+import { user as userTable } from "../db/schemas/auth";
+import { eq } from "drizzle-orm";
+import { APIError } from "better-auth/api";
 
 export interface AuthConfig {
 	email: {
@@ -27,8 +30,25 @@ export interface AuthConfig {
 	cookieDomain?: string;
 }
 
+function generateInviteCode(): string {
+	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+	let result = '';
+	for (let i = 0; i < 8; i++) {
+		result += chars.charAt(Math.floor(Math.random() * chars.length));
+	}
+	return result;
+}
+
+async function validateInviteCode(db: any, inviteCode: string) {
+	const inviter = await db.select()
+		.from(userTable)
+		.where(eq(userTable.inviteCode, inviteCode))
+		.get();
+	return inviter;
+}
+
 export const hashPassword = async (password: string): Promise<string> => {
-	const salt = crypto.getRandomValues(new Uint8Array(16));
+	const salt = getRandomValues(new Uint8Array(16));
 	const saltHex = Array.from(salt)
 		.map((b) => b.toString(16).padStart(2, "0"))
 		.join("");
@@ -69,13 +89,13 @@ export const createAuth = (db: any, config?: AuthConfig) =>
 		}),
 		...(config?.cookieDomain
 			? {
-					advanced: {
-						crossSubDomainCookies: {
-							enabled: true,
-							domain: config.cookieDomain,
-						},
+				advanced: {
+					crossSubDomainCookies: {
+						enabled: true,
+						domain: config.cookieDomain,
 					},
-				}
+				},
+			}
 			: {}),
 		emailAndPassword: {
 			enabled: true,
@@ -83,7 +103,7 @@ export const createAuth = (db: any, config?: AuthConfig) =>
 			// Custom password hashing function to avoid cloudflare workers cpu limitations, see: https://github.com/better-auth/better-auth/issues/969
 			password: {
 				hash: async (password) => {
-					const salt = crypto.getRandomValues(new Uint8Array(16));
+					const salt = getRandomValues(new Uint8Array(16));
 					const saltHex = Array.from(salt)
 						.map((b) => b.toString(16).padStart(2, "0"))
 						.join("");
@@ -117,12 +137,58 @@ export const createAuth = (db: any, config?: AuthConfig) =>
 				},
 			},
 		},
-		/* 	emailVerification: {
+		hooks: {
+			before: async (inputContext: any) => {
+				const isSignUp = inputContext.path.includes('sign-up');
+				if (!isSignUp) return inputContext;
+
+				const inviteCode = inputContext.body.inviteCode;
+				if (!inviteCode) return inputContext;
+
+				const inviter = await validateInviteCode(db, inviteCode);
+				if (!inviter) {
+					throw new APIError("BAD_REQUEST", { message: "INVALID_INVITE_CODE" });
+				}
+
+				return inputContext;
+			},
+			after: async (inputContext: any) => {
+				const isSignUp = inputContext.path.includes('sign-up');
+				if (!isSignUp || !inputContext.context?.returned?.user) return inputContext;
+
+				const user = inputContext.context.returned.user;
+				const inviteCode = inputContext.body.inviteCode;
+				const newInviteCode = generateInviteCode();
+
+				try {
+					if (inviteCode) {
+						const inviter = await validateInviteCode(db, inviteCode);
+						if (!inviter) {
+							await db.delete(userTable).where(eq(userTable.id, user.id));
+							throw new APIError("BAD_REQUEST", { message: "INVALID_INVITE_CODE" });
+						}
+
+						await db.update(userTable).set({ inviteCode: newInviteCode, parentUserId: inviter.id }).where(eq(userTable.id, user.id));
+					} else {
+						await db.update(userTable).set({ inviteCode: newInviteCode }).where(eq(userTable.id, user.id));
+					}
+
+				} catch (error) {
+					if (error instanceof APIError) throw error;
+					console.error('after hook - error generating invite code:', error);
+				}
+
+				return inputContext;
+			},
+		},
+		/*  
+		emailVerification: {
 			sendVerificationEmail: async ({ user, url, token }, request) => {
 				console.log(`Sending verification email to ${user.email}`, url);
 				await sendEmail(user.email, url);
 			},
-		}, */
+		}, 
+		*/
 		emailVerification: {
 			autoSignInAfterVerification: true,
 		},
@@ -140,16 +206,16 @@ export const createAuth = (db: any, config?: AuthConfig) =>
 			google:
 				config?.social.google.enabled === true
 					? {
-							clientId: config.social.google.clientId,
-							clientSecret: config.social.google.clientSecret,
-						}
+						clientId: config.social.google.clientId,
+						clientSecret: config.social.google.clientSecret,
+					}
 					: undefined,
 			github:
 				config?.social.github.enabled === true
 					? {
-							clientId: config.social.github.clientId,
-							clientSecret: config.social.github.clientSecret,
-						}
+						clientId: config.social.github.clientId,
+						clientSecret: config.social.github.clientSecret,
+					}
 					: undefined,
 		},
 	});

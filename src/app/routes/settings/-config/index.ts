@@ -36,7 +36,18 @@ export const settingsSections: SettingsSection[] = [
 /**
  * Get the default settings section
  */
-export const getDefaultSection = () => settingsSections[0];
+export const getDefaultSection = (): SettingsSection => {
+	const defaultSection = settingsSections[0];
+	if (!defaultSection) {
+		return {
+			id: "common",
+			title: "settings.sections.common",
+			icon: Settings2,
+			path: "/settings/common",
+		};
+	}
+	return defaultSection;
+};
 
 /**
  * Find a settings section by ID

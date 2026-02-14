@@ -12,6 +12,8 @@ export const user = sqliteTable("user", {
 		.notNull(),
 	image: text("image"),
 	role: text({ enum: userRoles }).$defaultFn(() =>"user").notNull(),
+	inviteCode: text("invite_code").unique(),
+	parentUserId: text("parent_user_id"),
 	createdAt: integer("created_at", { mode: "timestamp" })
 		.$defaultFn(() => /* @__PURE__ */ new Date())
 		.notNull(),

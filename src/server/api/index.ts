@@ -144,7 +144,7 @@ const route = app
 	.route("/", chatsRouter)
 	.route("/", userRouter)
 	.route("/", aiRouter)
-	.route("/", fileRouter);
+	.route("/", fileRouter)
 
 export type AppType = typeof route;
 export default app;
