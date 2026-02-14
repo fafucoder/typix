@@ -1,1 +1,0 @@
-ALTER TABLE `message_generations` ADD `token_count` integer;

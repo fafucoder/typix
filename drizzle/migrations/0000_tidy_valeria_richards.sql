@@ -34,7 +34,7 @@ CREATE TABLE `user` (
 	`email` text NOT NULL,
 	`email_verified` integer NOT NULL,
 	`image` text,
-	`role` text DEFAULT 'user' NOT NULL,
+	`role` text NOT NULL,
 	`invite_code` text,
 	`parent_user_id` text,
 	`created_at` integer NOT NULL,
@@ -98,6 +98,7 @@ CREATE TABLE `message_generations` (
 	`file_ids` text,
 	`error_reason` text,
 	`generation_time` integer,
+	`token_count` integer,
 	`cost` real,
 	`created_at` text NOT NULL,
 	`updated_at` text NOT NULL

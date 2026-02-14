@@ -154,7 +154,7 @@ function AccountSettingsPage() {
 						<CardDescription className="mt-1 text-sm text-muted-foreground">{t("auth.loginToAccessAccountSettings")}</CardDescription>
 					</CardHeader>
 					<CardContent className="flex flex-col items-center gap-4">
-						<Button size="default" className="w-28 text-sm">
+						<Button size="default" className="w-28 text-sm" onClick={handleLogin}>
 							{t("auth.login")}
 						</Button>
 						<p className="mt-2 text-center text-xs text-muted-foreground">
