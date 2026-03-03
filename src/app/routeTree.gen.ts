@@ -8,162 +8,222 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteRouteImport } from './routes/settings/route'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as ChatIndexRouteImport } from './routes/chat/index'
+import { Route as SettingsDatabaseRouteImport } from './routes/settings/database'
+import { Route as SettingsCommonRouteImport } from './routes/settings/common'
+import { Route as SettingsAccountRouteImport } from './routes/settings/account'
+import { Route as SettingsProviderRouteRouteImport } from './routes/settings/provider/route'
+import { Route as SettingsProviderIndexRouteImport } from './routes/settings/provider/index'
+import { Route as SettingsProviderProviderIdRouteImport } from './routes/settings/provider/$providerId'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as SettingsRouteImport } from './routes/settings/route'
-import { Route as IndexImport } from './routes/index'
-import { Route as SettingsIndexImport } from './routes/settings/index'
-import { Route as ChatIndexImport } from './routes/chat/index'
-import { Route as SettingsDatabaseImport } from './routes/settings/database'
-import { Route as SettingsCommonImport } from './routes/settings/common'
-import { Route as SettingsAccountImport } from './routes/settings/account'
-import { Route as SettingsProviderRouteImport } from './routes/settings/provider/route'
-import { Route as SettingsProviderIndexImport } from './routes/settings/provider/index'
-import { Route as SettingsProviderProviderIdImport } from './routes/settings/provider/$providerId'
-
-// Create/Update Routes
-
-const SettingsRouteRoute = SettingsRouteImport.update({
+const SettingsRouteRoute = SettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const SettingsIndexRoute = SettingsIndexImport.update({
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
-
-const ChatIndexRoute = ChatIndexImport.update({
+const ChatIndexRoute = ChatIndexRouteImport.update({
   id: '/chat/',
   path: '/chat/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const SettingsDatabaseRoute = SettingsDatabaseImport.update({
+const SettingsDatabaseRoute = SettingsDatabaseRouteImport.update({
   id: '/database',
   path: '/database',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
-
-const SettingsCommonRoute = SettingsCommonImport.update({
+const SettingsCommonRoute = SettingsCommonRouteImport.update({
   id: '/common',
   path: '/common',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
-
-const SettingsAccountRoute = SettingsAccountImport.update({
+const SettingsAccountRoute = SettingsAccountRouteImport.update({
   id: '/account',
   path: '/account',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
-
-const SettingsProviderRouteRoute = SettingsProviderRouteImport.update({
+const SettingsProviderRouteRoute = SettingsProviderRouteRouteImport.update({
   id: '/provider',
   path: '/provider',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
-
-const SettingsProviderIndexRoute = SettingsProviderIndexImport.update({
+const SettingsProviderIndexRoute = SettingsProviderIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsProviderRouteRoute,
 } as any)
-
-const SettingsProviderProviderIdRoute = SettingsProviderProviderIdImport.update(
-  {
+const SettingsProviderProviderIdRoute =
+  SettingsProviderProviderIdRouteImport.update({
     id: '/$providerId',
     path: '/$providerId',
     getParentRoute: () => SettingsProviderRouteRoute,
-  } as any,
-)
+  } as any)
 
-// Populate the FileRoutesByPath interface
+export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
+  '/settings': typeof SettingsRouteRouteWithChildren
+  '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/common': typeof SettingsCommonRoute
+  '/settings/database': typeof SettingsDatabaseRoute
+  '/chat/': typeof ChatIndexRoute
+  '/settings/': typeof SettingsIndexRoute
+  '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
+  '/settings/provider/': typeof SettingsProviderIndexRoute
+}
+export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/common': typeof SettingsCommonRoute
+  '/settings/database': typeof SettingsDatabaseRoute
+  '/chat': typeof ChatIndexRoute
+  '/settings': typeof SettingsIndexRoute
+  '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
+  '/settings/provider': typeof SettingsProviderIndexRoute
+}
+export interface FileRoutesById {
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/settings': typeof SettingsRouteRouteWithChildren
+  '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/common': typeof SettingsCommonRoute
+  '/settings/database': typeof SettingsDatabaseRoute
+  '/chat/': typeof ChatIndexRoute
+  '/settings/': typeof SettingsIndexRoute
+  '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
+  '/settings/provider/': typeof SettingsProviderIndexRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/settings'
+    | '/settings/provider'
+    | '/settings/account'
+    | '/settings/common'
+    | '/settings/database'
+    | '/chat/'
+    | '/settings/'
+    | '/settings/provider/$providerId'
+    | '/settings/provider/'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/settings/account'
+    | '/settings/common'
+    | '/settings/database'
+    | '/chat'
+    | '/settings'
+    | '/settings/provider/$providerId'
+    | '/settings/provider'
+  id:
+    | '__root__'
+    | '/'
+    | '/settings'
+    | '/settings/provider'
+    | '/settings/account'
+    | '/settings/common'
+    | '/settings/database'
+    | '/chat/'
+    | '/settings/'
+    | '/settings/provider/$providerId'
+    | '/settings/provider/'
+  fileRoutesById: FileRoutesById
+}
+export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
+  SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
+  ChatIndexRoute: typeof ChatIndexRoute
+}
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof SettingsRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/settings/provider': {
-      id: '/settings/provider'
-      path: '/provider'
-      fullPath: '/settings/provider'
-      preLoaderRoute: typeof SettingsProviderRouteImport
-      parentRoute: typeof SettingsRouteImport
-    }
-    '/settings/account': {
-      id: '/settings/account'
-      path: '/account'
-      fullPath: '/settings/account'
-      preLoaderRoute: typeof SettingsAccountImport
-      parentRoute: typeof SettingsRouteImport
-    }
-    '/settings/common': {
-      id: '/settings/common'
-      path: '/common'
-      fullPath: '/settings/common'
-      preLoaderRoute: typeof SettingsCommonImport
-      parentRoute: typeof SettingsRouteImport
-    }
-    '/settings/database': {
-      id: '/settings/database'
-      path: '/database'
-      fullPath: '/settings/database'
-      preLoaderRoute: typeof SettingsDatabaseImport
-      parentRoute: typeof SettingsRouteImport
-    }
-    '/chat/': {
-      id: '/chat/'
-      path: '/chat'
-      fullPath: '/chat'
-      preLoaderRoute: typeof ChatIndexImport
-      parentRoute: typeof rootRoute
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/settings/': {
       id: '/settings/'
       path: '/'
       fullPath: '/settings/'
-      preLoaderRoute: typeof SettingsIndexImport
-      parentRoute: typeof SettingsRouteImport
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
-    '/settings/provider/$providerId': {
-      id: '/settings/provider/$providerId'
-      path: '/$providerId'
-      fullPath: '/settings/provider/$providerId'
-      preLoaderRoute: typeof SettingsProviderProviderIdImport
-      parentRoute: typeof SettingsProviderRouteImport
+    '/chat/': {
+      id: '/chat/'
+      path: '/chat'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof ChatIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/database': {
+      id: '/settings/database'
+      path: '/database'
+      fullPath: '/settings/database'
+      preLoaderRoute: typeof SettingsDatabaseRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/common': {
+      id: '/settings/common'
+      path: '/common'
+      fullPath: '/settings/common'
+      preLoaderRoute: typeof SettingsCommonRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/account': {
+      id: '/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof SettingsAccountRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/provider': {
+      id: '/settings/provider'
+      path: '/provider'
+      fullPath: '/settings/provider'
+      preLoaderRoute: typeof SettingsProviderRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
     '/settings/provider/': {
       id: '/settings/provider/'
       path: '/'
       fullPath: '/settings/provider/'
-      preLoaderRoute: typeof SettingsProviderIndexImport
-      parentRoute: typeof SettingsProviderRouteImport
+      preLoaderRoute: typeof SettingsProviderIndexRouteImport
+      parentRoute: typeof SettingsProviderRouteRoute
+    }
+    '/settings/provider/$providerId': {
+      id: '/settings/provider/$providerId'
+      path: '/$providerId'
+      fullPath: '/settings/provider/$providerId'
+      preLoaderRoute: typeof SettingsProviderProviderIdRouteImport
+      parentRoute: typeof SettingsProviderRouteRoute
     }
   }
 }
-
-// Create and export the route tree
 
 interface SettingsProviderRouteRouteChildren {
   SettingsProviderProviderIdRoute: typeof SettingsProviderProviderIdRoute
@@ -200,157 +260,11 @@ const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
   SettingsRouteRouteChildren,
 )
 
-export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/settings': typeof SettingsRouteRouteWithChildren
-  '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
-  '/settings/account': typeof SettingsAccountRoute
-  '/settings/common': typeof SettingsCommonRoute
-  '/settings/database': typeof SettingsDatabaseRoute
-  '/chat': typeof ChatIndexRoute
-  '/settings/': typeof SettingsIndexRoute
-  '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
-  '/settings/provider/': typeof SettingsProviderIndexRoute
-}
-
-export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/settings/account': typeof SettingsAccountRoute
-  '/settings/common': typeof SettingsCommonRoute
-  '/settings/database': typeof SettingsDatabaseRoute
-  '/chat': typeof ChatIndexRoute
-  '/settings': typeof SettingsIndexRoute
-  '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
-  '/settings/provider': typeof SettingsProviderIndexRoute
-}
-
-export interface FileRoutesById {
-  __root__: typeof rootRoute
-  '/': typeof IndexRoute
-  '/settings': typeof SettingsRouteRouteWithChildren
-  '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
-  '/settings/account': typeof SettingsAccountRoute
-  '/settings/common': typeof SettingsCommonRoute
-  '/settings/database': typeof SettingsDatabaseRoute
-  '/chat/': typeof ChatIndexRoute
-  '/settings/': typeof SettingsIndexRoute
-  '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
-  '/settings/provider/': typeof SettingsProviderIndexRoute
-}
-
-export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/settings'
-    | '/settings/provider'
-    | '/settings/account'
-    | '/settings/common'
-    | '/settings/database'
-    | '/chat'
-    | '/settings/'
-    | '/settings/provider/$providerId'
-    | '/settings/provider/'
-  fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/settings/account'
-    | '/settings/common'
-    | '/settings/database'
-    | '/chat'
-    | '/settings'
-    | '/settings/provider/$providerId'
-    | '/settings/provider'
-  id:
-    | '__root__'
-    | '/'
-    | '/settings'
-    | '/settings/provider'
-    | '/settings/account'
-    | '/settings/common'
-    | '/settings/database'
-    | '/chat/'
-    | '/settings/'
-    | '/settings/provider/$providerId'
-    | '/settings/provider/'
-  fileRoutesById: FileRoutesById
-}
-
-export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
-  ChatIndexRoute: typeof ChatIndexRoute
-}
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
   ChatIndexRoute: ChatIndexRoute,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/settings",
-        "/chat/"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/settings": {
-      "filePath": "settings/route.tsx",
-      "children": [
-        "/settings/provider",
-        "/settings/account",
-        "/settings/common",
-        "/settings/database",
-        "/settings/"
-      ]
-    },
-    "/settings/provider": {
-      "filePath": "settings/provider/route.tsx",
-      "parent": "/settings",
-      "children": [
-        "/settings/provider/$providerId",
-        "/settings/provider/"
-      ]
-    },
-    "/settings/account": {
-      "filePath": "settings/account.tsx",
-      "parent": "/settings"
-    },
-    "/settings/common": {
-      "filePath": "settings/common.tsx",
-      "parent": "/settings"
-    },
-    "/settings/database": {
-      "filePath": "settings/database.tsx",
-      "parent": "/settings"
-    },
-    "/chat/": {
-      "filePath": "chat/index.tsx"
-    },
-    "/settings/": {
-      "filePath": "settings/index.tsx",
-      "parent": "/settings"
-    },
-    "/settings/provider/$providerId": {
-      "filePath": "settings/provider/$providerId.tsx",
-      "parent": "/settings/provider"
-    },
-    "/settings/provider/": {
-      "filePath": "settings/provider/index.tsx",
-      "parent": "/settings/provider"
-    }
-  }
-}
-ROUTE_MANIFEST_END */

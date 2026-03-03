@@ -1,17 +1,20 @@
 import { inCfWorker } from "@/server/lib/env";
-import * as schema from "./schemas/index";
+import * as schema from "./schemas";
 
 export const createDb = async (client: any) => {
 	if (inCfWorker) {
-		const { drizzle } = await import("drizzle-orm/d1");
+		const d1Module = await import("drizzle-orm/d1");
+		const drizzle = d1Module.drizzle;
 		return drizzle(client, { schema, casing: "snake_case" });
 	}
-	const { drizzle } = await import("drizzle-orm/libsql");
-	const { client: sqliteClient } = await import("./sqlite");
-	return drizzle(sqliteClient, {
-		schema,
+	const mysql2Module = await import("drizzle-orm/mysql2");
+	const drizzle = mysql2Module.drizzle;
+	const { pool } = await import("./mysql");
+	return drizzle(pool, {
 		casing: "snake_case",
 		logger: process.env.NODE_ENV === "development" ? true : undefined,
+		schema: schema as any,
+		mode: "default",
 	});
 };
 

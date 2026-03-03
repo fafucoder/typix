@@ -1,67 +1,63 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { mysqlTable, varchar, int, timestamp, text } from "drizzle-orm/mysql-core";
 
 const userRoles = ["admin", "user"] as const;
 export type UserRole = (typeof userRoles)[number];
 
-export const user = sqliteTable("user", {
-	id: text("id").primaryKey(),
-	name: text("name").notNull(),
-	email: text("email").notNull().unique(),
-	emailVerified: integer("email_verified", { mode: "boolean" })
-		.$defaultFn(() => false)
+export const user = mysqlTable("user", {
+	id: varchar("id", { length: 255 }).primaryKey(),
+	name: varchar("name", { length: 255 }).notNull(),
+	email: varchar("email", { length: 255 }).notNull().unique(),
+	emailVerified: int("email_verified")
+		.default(0)
 		.notNull(),
 	image: text("image"),
-	role: text({ enum: userRoles }).$defaultFn(() =>"user").notNull(),
-	inviteCode: text("invite_code").unique(),
-	parentUserId: text("parent_user_id"),
-	createdAt: integer("created_at", { mode: "timestamp" })
+	role: varchar("role", { length: 10, enum: userRoles }).$defaultFn(() => "user").notNull(),
+	inviteCode: varchar("invite_code", { length: 255 }).unique(),
+	parentUserId: varchar("parent_user_id", { length: 255 }),
+	createdAt: timestamp("created_at")
 		.$defaultFn(() => /* @__PURE__ */ new Date())
 		.notNull(),
-	updatedAt: integer("updated_at", { mode: "timestamp" })
+	updatedAt: timestamp("updated_at")
 		.$defaultFn(() => /* @__PURE__ */ new Date())
 		.notNull(),
 });
 
-export const session = sqliteTable("session", {
-	id: text("id").primaryKey(),
-	expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-	token: text("token").notNull().unique(),
-	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-	ipAddress: text("ip_address"),
+export const session = mysqlTable("session", {
+	id: varchar("id", { length: 255 }).primaryKey(),
+	expiresAt: timestamp("expires_at").notNull(),
+	token: varchar("token", { length: 255 }).notNull().unique(),
+	createdAt: timestamp("created_at").notNull(),
+	updatedAt: timestamp("updated_at").notNull(),
+	ipAddress: varchar("ip_address", { length: 255 }),
 	userAgent: text("user_agent"),
-	userId: text("user_id")
+	userId: varchar("user_id", { length: 255 })
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),
 });
 
-export const account = sqliteTable("account", {
-	id: text("id").primaryKey(),
-	accountId: text("account_id").notNull(),
-	providerId: text("provider_id").notNull(),
-	userId: text("user_id")
+export const account = mysqlTable("account", {
+	id: varchar("id", { length: 255 }).primaryKey(),
+	accountId: varchar("account_id", { length: 255 }).notNull(),
+	providerId: varchar("provider_id", { length: 255 }).notNull(),
+	userId: varchar("user_id", { length: 255 })
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),
 	accessToken: text("access_token"),
 	refreshToken: text("refresh_token"),
 	idToken: text("id_token"),
-	accessTokenExpiresAt: integer("access_token_expires_at", {
-		mode: "timestamp",
-	}),
-	refreshTokenExpiresAt: integer("refresh_token_expires_at", {
-		mode: "timestamp",
-	}),
+	accessTokenExpiresAt: timestamp("access_token_expires_at"),
+	refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
 	scope: text("scope"),
 	password: text("password"),
-	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-	updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+	createdAt: timestamp("created_at").notNull(),
+	updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const verification = sqliteTable("verification", {
-	id: text("id").primaryKey(),
-	identifier: text("identifier").notNull(),
+export const verification = mysqlTable("verification", {
+	id: varchar("id", { length: 255 }).primaryKey(),
+	identifier: varchar("identifier", { length: 255 }).notNull(),
 	value: text("value").notNull(),
-	expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-	createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => /* @__PURE__ */ new Date()),
-	updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => /* @__PURE__ */ new Date()),
+	expiresAt: timestamp("expires_at").notNull(),
+	createdAt: timestamp("created_at").$defaultFn(() => /* @__PURE__ */ new Date()),
+	updatedAt: timestamp("updated_at").$defaultFn(() => /* @__PURE__ */ new Date()),
 });
