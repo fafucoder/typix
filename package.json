@@ -20,6 +20,7 @@
 		"db:studio": "drizzle-kit studio",
 		"db:migrate:dev:worker": "wrangler d1 migrations apply --local typix",
 		"db:migrate:worker": "wrangler d1 migrations apply --remote typix",
+		"create-admin": "npx tsx scripts/create-admin.ts",
 		"deploy": "npm run db:migrate:worker && wrangler deploy",
 		"deploy:no-migrate": "wrangler deploy"
 	},
@@ -126,6 +127,7 @@
 		"prettier-plugin-tailwindcss": "^0.7.2",
 		"smol-toml": "^1.4.1",
 		"tsup": "^8.5.0",
+		"tsx": "^4.21.0",
 		"typescript": "~5.9.3",
 		"vite": "^7.3.0",
 		"vite-bundle-analyzer": "^1.1.0",

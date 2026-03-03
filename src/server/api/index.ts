@@ -13,6 +13,7 @@ import aiRouter from "./routes/ai";
 import chatsRouter from "./routes/chat";
 import fileRouter from "./routes/file";
 import userRouter from "./routes/settings";
+import adminRouter from "./routes/admin";
 import type { ApiResult, Env } from "./util";
 
 const factory = createFactory<Env>({
@@ -145,6 +146,7 @@ const route = app
 	.route("/", userRouter)
 	.route("/", aiRouter)
 	.route("/", fileRouter)
+	.route("/", adminRouter)
 
 export type AppType = typeof route;
 export default app;

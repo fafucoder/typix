@@ -1,8 +1,8 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { sleep, cn } from '@/lib/utils'
@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input'
 
 const formSchema = z.object({
   email: z.email({
-    error: (iss) => (iss.input === '' ? 'Please enter your email' : undefined),
+    error: (iss) => (iss.input === '' ? 'emailRequired' : undefined),
   }),
 })
 
@@ -27,8 +27,8 @@ export function ForgotPasswordForm({
   className,
   ...props
 }: React.HTMLAttributes<HTMLFormElement>) {
-  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
+  const { t } = useTranslation()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -37,18 +37,16 @@ export function ForgotPasswordForm({
 
   function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
-    // eslint-disable-next-line no-console
     console.log(data)
 
     toast.promise(sleep(2000), {
-      loading: 'Sending email...',
+      loading: t('auth.forgotPassword.sending'),
       success: () => {
         setIsLoading(false)
         form.reset()
-        navigate({ to: '/otp' })
-        return `Email sent to ${data.email}`
+        return t('auth.forgotPassword.emailSent', { email: data.email })
       },
-      error: 'Error',
+      error: t('errors.generalError'),
     })
   }
 
@@ -64,17 +62,17 @@ export function ForgotPasswordForm({
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{t('auth.forgotPassword.email')}</FormLabel>
               <FormControl>
-                <Input placeholder='name@example.com' {...field} />
+                <Input placeholder={t('auth.forgotPassword.emailPlaceholder')} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <Button className='mt-2' disabled={isLoading}>
-          Continue
           {isLoading ? <Loader2 className='animate-spin' /> : <ArrowRight />}
+          {isLoading ? t('auth.forgotPassword.sending') : t('auth.forgotPassword.sendButton')}
         </Button>
       </form>
     </Form>

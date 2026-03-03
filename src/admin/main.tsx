@@ -9,6 +9,7 @@ import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
 import { routeTree } from './routeTree.gen'
+import './i18n'
 import './styles/index.css'
 
 const queryClient = new QueryClient({
