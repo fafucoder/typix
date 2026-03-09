@@ -20,19 +20,19 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "incremental": true,
-    "types": ["@cloudflare/workers-types"],
+    "types": ["@cloudflare/workers-types", "node"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/app/*": ["./src/app/*"],
+      "@/server/*": ["./src/server/*"]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     "**/*.cjs",
-    "**/*.js",
-    "src/app/routes/settings/provider.tsx.bak",
-    "src/app/routes/settings/provider.$providerId.tsx.bak"
+    "**/*.js"
   ],
-  "exclude": ["node_modules", "dist", "docs", "src/admin"]
+  "exclude": ["node_modules", "dist", "dist-web", "docs", "src/web","src/admin"]
 }

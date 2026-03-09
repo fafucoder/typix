@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { sendEmail } from "./email";
-import { user as userTable } from "../db/schemas/auth";
+import { user as userTable, account, session, verification } from "../db/schemas/auth";
 import { eq } from "drizzle-orm";
 import { APIError } from "better-auth/api";
 
@@ -85,7 +85,13 @@ export const verifyPassword = async (hash: string, password: string): Promise<bo
 export const createAuth = (db: any, config?: AuthConfig) =>
 	betterAuth({
 		database: drizzleAdapter(db, {
-			provider: "sqlite",
+			provider: "mysql",
+			schema: {
+				user: userTable,
+				session: session,
+				account: account,
+				verification: verification,
+			},
 		}),
 		...(config?.cookieDomain
 			? {

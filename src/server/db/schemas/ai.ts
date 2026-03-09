@@ -9,26 +9,32 @@ export const aiProviders = mysqlTable(
 	{
 		id: varchar("id", { length: 255 }).$defaultFn(generateId).primaryKey(),
 		providerId: varchar("provider_id", { length: 255 }).notNull().unique(), // Unique identifier for the AI provider
-		userId: varchar("user_id", { length: 255 }).notNull(), // User ID who owns the provider
+		name: varchar("name", { length: 255 }).notNull(), // Provider display name
+		icon: varchar("icon", { length: 255 }), // Provider icon URL or identifier
+		endpoints: varchar("endpoints", { length: 255 }), // API endpoint URL
+		secretKey: varchar("secret_key", { length: 255 }), // API secret key (encrypted)
 		enabled: int("enabled").default(1).notNull(), // Whether the provider is enabled (1=true, 0=false)
 		settings: text("settings"), // Provider-specific settings as JSON
 		createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
 		updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 	},
-	(t) => [unique().on(t.userId, t.providerId)],
 );
+
+// Model types: text2image (文生图), text2video (文生视频)
+const modelTypes = ["text2image", "text2video"] as const;
+export type ModelType = (typeof modelTypes)[number];
 
 // AI Models table
 export const aiModels = mysqlTable(
 	"ai_models",
 	{
 		id: varchar("id", { length: 255 }).$defaultFn(generateId).primaryKey(),
-		providerId: varchar("provider_id", { length: 255 }).notNull(), // Unique identifier for the AI provider
+		providerId: varchar("provider_id", { length: 255 }).notNull(), // Reference to ai provider
 		modelId: varchar("model_id", { length: 255 }).notNull(), // Unique identifier for the model within the provider
+		type: varchar("type", { length: 20, enum: modelTypes }).notNull(), // Model type: text2image or text2video
 		enabled: int("enabled").default(1).notNull(), // Whether the model is enabled (1=true, 0=false)
-		userId: varchar("user_id", { length: 255 }).notNull(), // User ID who owns the model
 		createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
 		updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 	},
-	(t) => [unique().on(t.userId, t.providerId, t.modelId)],
+	(t) => [unique().on(t.providerId, t.modelId)],
 );

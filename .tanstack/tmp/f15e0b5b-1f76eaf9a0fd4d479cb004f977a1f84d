@@ -1,0 +1,662 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { useState, Fragment } from 'react'
+import {
+  ArrowLeft,
+  Plus,
+  Edit,
+  Search as SearchIcon,
+  Eye,
+  EyeOff,
+  MoreVertical,
+  Check,
+  X,
+  Image as ImageIcon,
+  Video,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Switch } from '@/components/ui/switch'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { toast } from 'sonner'
+import { useRouter } from '@tanstack/react-router'
+import { aiService } from '@/web/lib/api/ai'
+
+interface AiProvider {
+  id: string
+  providerId: string
+  name: string
+  icon: string | null
+  endpoints: string | null
+  secretKey: string | null
+  enabled: number
+  settings: string | null
+  createdAt: string
+  updatedAt: string
+  models: AiModel[]
+}
+
+interface AiModel {
+  id: string
+  providerId: string
+  modelId: string
+  type: 'text2image' | 'text2video'
+  enabled: number
+  createdAt: string
+  updatedAt: string
+}
+
+function AIProvidersPage() {
+  const router = useRouter()
+  const [selectedProvider, setSelectedProvider] = useState<AiProvider | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isCreateModelDialogOpen, setIsCreateModelDialogOpen] = useState(false)
+  const [providers, setProviders] = useState<AiProvider[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [mobileSelectedProvider, setMobileSelectedProvider] = useState<AiProvider | null>(null)
+  
+  // Form states
+  const [formData, setFormData] = useState({
+    name: '',
+    providerId: '',
+    icon: '',
+    endpoints: '',
+    secretKey: '',
+  })
+  
+  const [modelFormData, setModelFormData] = useState({
+    modelId: '',
+    type: 'text2image' as 'text2image' | 'text2video',
+  })
+  
+  const [showSecretKey, setShowSecretKey] = useState(false)
+
+  // Load providers
+  useState(() => {
+    const loadProviders = async () => {
+      try {
+        setIsLoading(true)
+        const data = await aiService.getProviders()
+        setProviders(data)
+        if (data.length > 0) {
+          setSelectedProvider(data[0])
+          setFormData({
+            name: data[0].name,
+            providerId: data[0].providerId,
+            icon: data[0].icon || '',
+            endpoints: data[0].endpoints || '',
+            secretKey: data[0].secretKey || '',
+          })
+        }
+      } catch (error) {
+        toast.error('加载提供商失败')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadProviders()
+  })
+
+  const handleCreateProvider = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const result = await aiService.createProvider(formData)
+      toast.success('提供商创建成功')
+      
+      // Refresh providers
+      const data = await aiService.getProviders()
+      setProviders(data)
+      setSelectedProvider(data.find(p => p.id === result.id) || data[0])
+      setIsCreateDialogOpen(false)
+      setFormData({ name: '', providerId: '', icon: '', endpoints: '', secretKey: '' })
+    } catch (error) {
+      toast.error('创建失败，请稍后重试')
+    }
+  }
+
+  const handleUpdateProvider = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedProvider) return
+    
+    try {
+      await aiService.updateProvider(selectedProvider.id, formData)
+      toast.success('提供商更新成功')
+      
+      // Refresh providers
+      const data = await aiService.getProviders()
+      setProviders(data)
+      setSelectedProvider(data.find(p => p.id === selectedProvider.id))
+      setIsEditDialogOpen(false)
+    } catch (error) {
+      toast.error('更新失败，请稍后重试')
+    }
+  }
+
+  const handleDeleteProvider = async (id: string) => {
+    if (!confirm('确定要删除这个提供商吗？')) return
+    
+    try {
+      await aiService.deleteProvider(id)
+      toast.success('提供商删除成功')
+      
+      // Refresh providers
+      const data = await aiService.getProviders()
+      setProviders(data)
+      setSelectedProvider(data.length > 0 ? data[0] : null)
+    } catch (error) {
+      toast.error('删除失败，请稍后重试')
+    }
+  }
+
+  const handleToggleProvider = async (id: string) => {
+    try {
+      const result = await aiService.toggleProvider(id)
+      toast.success(result.enabled ? '已启用' : '已禁用')
+      
+      // Refresh providers
+      const data = await aiService.getProviders()
+      setProviders(data)
+      setSelectedProvider(data.find(p => p.id === selectedProvider?.id))
+    } catch (error) {
+      toast.error('操作失败，请稍后重试')
+    }
+  }
+
+  const handleCreateModel = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedProvider) return
+    
+    try {
+      await aiService.createModel({
+        providerId: selectedProvider.id,
+        modelId: modelFormData.modelId,
+        type: modelFormData.type,
+      })
+      toast.success('模型创建成功')
+      
+      // Refresh providers
+      const data = await aiService.getProviders()
+      setProviders(data)
+      setSelectedProvider(data.find(p => p.id === selectedProvider.id))
+      setIsCreateModelDialogOpen(false)
+      setModelFormData({ modelId: '', type: 'text2image' })
+    } catch (error) {
+      toast.error('创建失败，请稍后重试')
+    }
+  }
+
+  const handleDeleteModel = async (id: string) => {
+    if (!confirm('确定要删除这个模型吗？')) return
+    
+    try {
+      await aiService.deleteModel(id)
+      toast.success('模型删除成功')
+      
+      // Refresh providers
+      const data = await aiService.getProviders()
+      setProviders(data)
+      setSelectedProvider(data.find(p => p.id === selectedProvider?.id))
+    } catch (error) {
+      toast.error('删除失败，请稍后重试')
+    }
+  }
+
+  const handleToggleModel = async (id: string) => {
+    try {
+      const result = await aiService.toggleModel(id)
+      toast.success(result.enabled ? '已启用' : '已禁用')
+      
+      // Refresh providers
+      const data = await aiService.getProviders()
+      setProviders(data)
+      setSelectedProvider(data.find(p => p.id === selectedProvider?.id))
+    } catch (error) {
+      toast.error('操作失败，请稍后重试')
+    }
+  }
+
+  const filteredProviders = providers.filter(provider =>
+    provider.name.toLowerCase().includes(search.toLowerCase()) ||
+    provider.providerId.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <div className='flex h-full w-full gap-6'>
+      {/* Left Side - Providers List */}
+      <div className='flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80'>
+        <div className='sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none'>
+          <div className='flex items-center justify-between py-2'>
+            <div className='flex gap-2'>
+              <h1 className='text-2xl font-bold'>AI 提供商</h1>
+            </div>
+
+            <Button
+              size='icon'
+              variant='ghost'
+              onClick={() => setIsCreateDialogOpen(true)}
+              className='rounded-lg'
+            >
+              <Plus size={24} className='stroke-muted-foreground' />
+            </Button>
+          </div>
+
+          <label
+            className={cn(
+              'focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden',
+              'flex h-10 w-full items-center space-x-0 rounded-md border border-border ps-2'
+            )}
+          >
+            <SearchIcon size={15} className='me-2 stroke-slate-500' />
+            <span className='sr-only'>Search</span>
+            <input
+              type='text'
+              className='w-full flex-1 bg-inherit text-sm focus-visible:outline-hidden'
+              placeholder='搜索提供商...'
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </label>
+        </div>
+
+        <ScrollArea className='-mx-3 h-full overflow-scroll p-3'>
+          {filteredProviders.map((provider) => (
+            <Fragment key={provider.id}>
+              <button
+                type='button'
+                className={cn(
+                  'group hover:bg-accent hover:text-accent-foreground',
+                  `flex w-full rounded-md px-2 py-2 text-start text-sm`,
+                  selectedProvider?.id === provider.id && 'sm:bg-muted'
+                )}
+                onClick={() => {
+                  setSelectedProvider(provider)
+                  setMobileSelectedProvider(provider)
+                  setFormData({
+                    name: provider.name,
+                    providerId: provider.providerId,
+                    icon: provider.icon || '',
+                    endpoints: provider.endpoints || '',
+                    secretKey: provider.secretKey || '',
+                  })
+                }}
+              >
+                <div className='flex items-center gap-2'>
+                  <div className='flex h-10 w-10 items-center justify-center rounded-full bg-muted'>
+                    {provider.icon ? (
+                      <img src={provider.icon} alt={provider.name} className='h-8 w-8 object-cover rounded-full' />
+                    ) : (
+                      <span className='text-sm font-medium'>{provider.name.charAt(0)}</span>
+                    )}
+                  </div>
+                  <div className='flex-1 min-w-0'>
+                    <span className='block font-medium truncate'>{provider.name}</span>
+                    <span className='block text-xs text-muted-foreground truncate'>{provider.providerId}</span>
+                  </div>
+                  <Switch
+                    checked={provider.enabled === 1}
+                    onCheckedChange={() => handleToggleProvider(provider.id)}
+                    className='data-[state=checked]:bg-primary'
+                  />
+                </div>
+              </button>
+              <Separator className='my-1' />
+            </Fragment>
+          ))}
+        </ScrollArea>
+      </div>
+
+      {/* Right Side - Provider Details */}
+      {selectedProvider ? (
+        <div
+          className={cn(
+            'absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md',
+            mobileSelectedProvider && 'start-0 flex'
+          )}
+        >
+          {/* Top Part */}
+          <div className='mb-1 flex flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md'>
+            {/* Left */}
+            <div className='flex gap-3'>
+              <Button
+                size='icon'
+                variant='ghost'
+                className='-ms-2 h-full sm:hidden'
+                onClick={() => setMobileSelectedProvider(null)}
+              >
+                <ArrowLeft className='rtl:rotate-180' />
+              </Button>
+              <div className='flex items-center gap-2 lg:gap-4'>
+                <div className='flex h-10 w-10 items-center justify-center rounded-full bg-muted'>
+                  {selectedProvider.icon ? (
+                    <img src={selectedProvider.icon} alt={selectedProvider.name} className='h-8 w-8 object-cover rounded-full' />
+                  ) : (
+                    <span className='text-sm font-medium'>{selectedProvider.name.charAt(0)}</span>
+                  )}
+                </div>
+                <div>
+                  <span className='col-start-2 row-span-2 text-sm font-medium lg:text-base'>
+                    {selectedProvider.name}
+                  </span>
+                  <span className='col-start-2 row-span-2 row-start-2 line-clamp-1 block max-w-32 text-xs text-nowrap text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm'>
+                    {selectedProvider.providerId}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right */}
+            <div className='-me-1 flex items-center gap-1 lg:gap-2'>
+              <Button
+                size='icon'
+                variant='ghost'
+                className='h-10 rounded-md sm:h-8 sm:w-4 lg:h-10 lg:w-6'
+                onClick={() => setIsEditDialogOpen(true)}
+              >
+                <Edit size={20} className='stroke-muted-foreground' />
+              </Button>
+              <Button
+                size='icon'
+                variant='ghost'
+                className='h-10 rounded-md sm:h-8 sm:w-4 lg:h-10 lg:w-6'
+                onClick={() => handleDeleteProvider(selectedProvider.id)}
+              >
+                <X size={20} className='stroke-muted-foreground' />
+              </Button>
+            </div>
+          </div>
+
+          {/* Provider Configuration */}
+          <div className='flex flex-1 flex-col gap-6 p-6'>
+            {/* API Configuration */}
+            <div className='space-y-4'>
+              <h2 className='text-lg font-semibold'>API 配置</h2>
+              
+              <div className='space-y-2'>
+                <div className='space-y-2'>
+                  <Label htmlFor='endpoints'>API 端点</Label>
+                  <Input
+                    id='endpoints'
+                    value={selectedProvider.endpoints || ''}
+                    readOnly
+                    className='bg-muted'
+                  />
+                </div>
+                
+                <div className='space-y-2'>
+                  <Label htmlFor='secretKey'>API 密钥</Label>
+                  <div className='relative'>
+                    <Input
+                      id='secretKey'
+                      type={showSecretKey ? 'text' : 'password'}
+                      value={selectedProvider.secretKey || ''}
+                      readOnly
+                      className='bg-muted pr-10'
+                    />
+                    <Button
+                      size='icon'
+                      variant='ghost'
+                      className='absolute right-0 top-0 h-full w-10 rounded-e-md'
+                      onClick={() => setShowSecretKey(!showSecretKey)}
+                    >
+                      {showSecretKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Models */}
+            <div className='flex-1 space-y-4'>
+              <div className='flex items-center justify-between'>
+                <h2 className='text-lg font-semibold'>模型</h2>
+                <Button
+                  size='sm'
+                  onClick={() => setIsCreateModelDialogOpen(true)}
+                  className='gap-1'
+                >
+                  <Plus size={16} />
+                  添加模型
+                </Button>
+              </div>
+              
+              <ScrollArea className='h-[300px] rounded-md border'>
+                {selectedProvider.models.length === 0 ? (
+                  <div className='flex h-full items-center justify-center text-muted-foreground'>
+                    暂无模型
+                  </div>
+                ) : (
+                  <div className='space-y-2 p-4'>
+                    {selectedProvider.models.map((model) => (
+                      <div key={model.id} className='flex items-center justify-between rounded-md border p-3'>
+                        <div className='flex items-center gap-3'>
+                          <div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'>
+                            {model.type === 'text2image' ? (
+                              <ImageIcon size={16} />
+                            ) : (
+                              <Video size={16} />
+                            )}
+                          </div>
+                          <div>
+                            <div className='font-medium'>{model.modelId}</div>
+                            <div className='text-xs text-muted-foreground'>
+                              {model.type === 'text2image' ? '文生图' : '文生视频'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className='flex items-center gap-2'>
+                          <Switch
+                            checked={model.enabled === 1}
+                            onCheckedChange={() => handleToggleModel(model.id)}
+                            className='data-[state=checked]:bg-primary'
+                          />
+                          <Button
+                            size='icon'
+                            variant='ghost'
+                            className='h-8 w-8 rounded-md'
+                            onClick={() => handleDeleteModel(model.id)}
+                          >
+                            <X size={16} className='stroke-muted-foreground' />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className='flex flex-1 items-center justify-center text-muted-foreground'>
+          请选择一个提供商
+        </div>
+      )}
+
+      {/* Create Provider Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle>添加提供商</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateProvider} className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='name'>名称</Label>
+              <Input
+                id='name'
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='providerId'>提供商 ID</Label>
+              <Input
+                id='providerId'
+                value={formData.providerId}
+                onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
+                required
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='icon'>图标 URL</Label>
+              <Input
+                id='icon'
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='endpoints'>API 端点</Label>
+              <Input
+                id='endpoints'
+                value={formData.endpoints}
+                onChange={(e) => setFormData({ ...formData, endpoints: e.target.value })}
+                required
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='secretKey'>API 密钥</Label>
+              <Input
+                id='secretKey'
+                type='password'
+                value={formData.secretKey}
+                onChange={(e) => setFormData({ ...formData, secretKey: e.target.value })}
+                required
+              />
+            </div>
+            <div className='flex justify-end gap-2'>
+              <Button type='button' variant='ghost' onClick={() => setIsCreateDialogOpen(false)}>
+                取消
+              </Button>
+              <Button type='submit'>创建</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Provider Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle>编辑提供商</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateProvider} className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='edit-name'>名称</Label>
+              <Input
+                id='edit-name'
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='edit-providerId'>提供商 ID</Label>
+              <Input
+                id='edit-providerId'
+                value={formData.providerId}
+                onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
+                required
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='edit-icon'>图标 URL</Label>
+              <Input
+                id='edit-icon'
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='edit-endpoints'>API 端点</Label>
+              <Input
+                id='edit-endpoints'
+                value={formData.endpoints}
+                onChange={(e) => setFormData({ ...formData, endpoints: e.target.value })}
+                required
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='edit-secretKey'>API 密钥</Label>
+              <Input
+                id='edit-secretKey'
+                type='password'
+                value={formData.secretKey}
+                onChange={(e) => setFormData({ ...formData, secretKey: e.target.value })}
+                required
+              />
+            </div>
+            <div className='flex justify-end gap-2'>
+              <Button type='button' variant='ghost' onClick={() => setIsEditDialogOpen(false)}>
+                取消
+              </Button>
+              <Button type='submit'>保存</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Model Dialog */}
+      <Dialog open={isCreateModelDialogOpen} onOpenChange={setIsCreateModelDialogOpen}>
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle>添加模型</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateModel} className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='modelId'>模型 ID</Label>
+              <Input
+                id='modelId'
+                value={modelFormData.modelId}
+                onChange={(e) => setModelFormData({ ...modelFormData, modelId: e.target.value })}
+                required
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label>模型类型</Label>
+              <div className='flex gap-4'>
+                <label className='flex items-center gap-2'>
+                  <input
+                    type='radio'
+                    name='modelType'
+                    value='text2image'
+                    checked={modelFormData.type === 'text2image'}
+                    onChange={() => setModelFormData({ ...modelFormData, type: 'text2image' })}
+                    className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
+                  />
+                  文生图
+                </label>
+                <label className='flex items-center gap-2'>
+                  <input
+                    type='radio'
+                    name='modelType'
+                    value='text2video'
+                    checked={modelFormData.type === 'text2video'}
+                    onChange={() => setModelFormData({ ...modelFormData, type: 'text2video' })}
+                    className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
+                  />
+                  文生视频
+                </label>
+              </div>
+            </div>
+            <div className='flex justify-end gap-2'>
+              <Button type='button' variant='ghost' onClick={() => setIsCreateModelDialogOpen(false)}>
+                取消
+              </Button>
+              <Button type='submit'>创建</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+export const Route = createFileRoute('/_authenticated/ai-providers/')({
+  component: AIProvidersPage,
+})

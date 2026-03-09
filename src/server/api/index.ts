@@ -11,9 +11,9 @@ import { ServiceException } from "../lib/exception";
 import { initContext } from "../service/context";
 import aiRouter from "./routes/ai";
 import chatsRouter from "./routes/chat";
+import creationRouter from "./routes/creation";
 import fileRouter from "./routes/file";
 import userRouter from "./routes/settings";
-import adminRouter from "./routes/admin";
 import type { ApiResult, Env } from "./util";
 
 const factory = createFactory<Env>({
@@ -146,7 +146,7 @@ const route = app
 	.route("/", userRouter)
 	.route("/", aiRouter)
 	.route("/", fileRouter)
-	.route("/", adminRouter)
+	.route("/", creationRouter)
 
 export type AppType = typeof route;
 export default app;

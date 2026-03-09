@@ -136,21 +136,20 @@ const updateAiProvider = async (req: UpdateAiProvider, ctx: RequestContext) => {
 		where: and(eq(aiProviders.providerId, req.providerId), eq(aiProviders.userId, userId)),
 	});
 	if (!existingProvider) {
-		// Insert new provider
 		await db.insert(aiProviders).values({
-			providerId: providerInstance.id,
+			providerId: req.providerId,
 			userId: userId,
-			settings: req.settings,
+			settings: req.settings ? JSON.stringify(req.settings) : null,
+			enabled: req.enabled,
 		});
 		return;
 	}
 
-	// Update provider in database
 	await db
 		.update(aiProviders)
 		.set({
 			enabled: req.enabled,
-			settings: req.settings,
+			settings: req.settings ? JSON.stringify(req.settings) : null,
 		})
 		.where(eq(aiProviders.id, existingProvider.id));
 
@@ -167,7 +166,7 @@ const getAiModelsByProviderId = async (req: GetAiModelsByProviderId, ctx: Reques
 
 	const providerInstance = getProviderById(req.providerId);
 	const models = await db.query.aiModels.findMany({
-		where: and(eq(aiModels.providerId, providerInstance.id), eq(aiModels.userId, userId)),
+		where: and(eq(aiModels.providerId, req.providerId), eq(aiModels.userId, userId)),
 	});
 
 	return providerInstance.models.map((model) => {
@@ -200,15 +199,14 @@ const updateAiModel = async (req: UpdateAiModel, ctx: RequestContext) => {
 	// Insert or update in database
 	const existingModel = await db.query.aiModels.findFirst({
 		where: and(
-			eq(aiModels.providerId, providerInstance.id),
+			eq(aiModels.providerId, req.providerId),
 			eq(aiModels.modelId, req.modelId),
 			eq(aiModels.userId, userId),
 		),
 	});
 	if (!existingModel) {
-		// Insert new model
 		await db.insert(aiModels).values({
-			providerId: providerInstance.id,
+			providerId: req.providerId,
 			modelId: req.modelId,
 			userId: userId,
 			enabled: req.enabled,

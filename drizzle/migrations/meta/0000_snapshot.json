@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "852af282-722d-43bd-8a47-033a71d4748c",
+  "id": "1744b858-fd96-434e-acdc-8f689b7da7e3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -894,6 +894,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "type": {
+          "name": "type",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "enabled": {
           "name": "enabled",
           "type": "int",
@@ -901,13 +908,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",
@@ -935,10 +935,9 @@
         }
       },
       "uniqueConstraints": {
-        "ai_models_user_id_provider_id_model_id_unique": {
-          "name": "ai_models_user_id_provider_id_model_id_unique",
+        "ai_models_provider_id_model_id_unique": {
+          "name": "ai_models_provider_id_model_id_unique",
           "columns": [
-            "user_id",
             "provider_id",
             "model_id"
           ]
@@ -963,8 +962,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "user_id": {
-          "name": "user_id",
+        "name": {
+          "name": "name",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
@@ -1014,13 +1013,6 @@
         "ai_providers_provider_id_unique": {
           "name": "ai_providers_provider_id_unique",
           "columns": [
-            "provider_id"
-          ]
-        },
-        "ai_providers_user_id_provider_id_unique": {
-          "name": "ai_providers_user_id_provider_id_unique",
-          "columns": [
-            "user_id",
             "provider_id"
           ]
         }

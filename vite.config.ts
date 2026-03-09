@@ -71,9 +71,9 @@ export default defineConfig(({ mode }) => {
 			exclude: ["@vlcn.io/crsqlite-wasm"],
 		},
 		resolve: {
-			alias: {
-				"@": path.resolve(__dirname, "./src"),
-			},
+			alias: [
+				{ find: "@", replacement: path.resolve(__dirname, "./src") },
+			],
 		},
 		// Only define environment variables that are needed on the client side
 		define: {
