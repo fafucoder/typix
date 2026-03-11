@@ -8,12 +8,14 @@
     "confirm": "确认",
     "create": "创建",
     "loading": "加载中...",
+    "processing": "处理中...",
     "error": "错误",
     "success": "成功",
     "unknown": "未知",
     "yesterday": "昨天",
     "daysAgo": "天前",
-    "and": "和"
+    "and": "和",
+    "remove": "移除"
   },
   "app": {
     "initializing": "初始化中",
@@ -231,7 +233,10 @@
       "usageCount": "可使用 {{count}} {{unit}}",
       "videos": "个视频",
       "images": "张图",
-      "times": "次"
+      "times": "次",
+      "pleaseEnterCoupon": "请输入优惠券代码",
+      "invalidCoupon": "优惠券无效",
+      "minOrderAmountRequired": "订单金额需满 {{amount}} 才能使用此优惠券"
     },
     "orders": {
           "title": "账单管理",

@@ -16,6 +16,7 @@ import userRouter from "./routes/settings";
 import subscribeRouter from "./routes/subscribe";
 import orderRouter from "./routes/order";
 import paymentRouter from "./routes/payment";
+import { couponRoutes } from "./routes/coupon";
 import type { ApiResult, Env } from "./util";
 
 const factory = createFactory<Env>({
@@ -154,6 +155,7 @@ const route = app
 	.route("/", subscribeRouter)
 	.route("/", orderRouter)
 	.route("/", paymentRouter)
+	.route("/", couponRoutes)
 
 export type AppType = typeof route;
 export default app;

@@ -4,10 +4,12 @@ import { SettingsPageLayout } from "@/app/routes/settings/-components/SettingsPa
 import { useState, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { createFileRoute, useSearch, Link } from "@tanstack/react-router";
-import { ArrowLeft, ChevronRight, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronRight, Sparkles, CheckCircle2, XCircle } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useUIStore } from "@/app/stores";
 import { useOrderService } from "@/app/lib/service/order";
+import { useCouponService } from "@/app/lib/service/coupon";
+import type { ValidatedCoupon } from "@/app/lib/api/coupon";
 import { ModelIcon } from "@lobehub/icons";
 
 export const Route = createFileRoute("/settings/subscription/checkout")({
@@ -20,6 +22,10 @@ function SubscriptionCheckoutPage() {
 	const { openLoginModal } = useUIStore();
 	const [isConfirming, setIsConfirming] = useState<boolean>(false);
 	const [couponCode, setCouponCode] = useState<string>("");
+	const [validatedCoupon, setValidatedCoupon] = useState<ValidatedCoupon | null>(null);
+	const [couponError, setCouponError] = useState<string | null>(null);
+	const [isApplyingCoupon, setIsApplyingCoupon] = useState<boolean>(false);
+	const couponService = useCouponService();
 
 	// 从 URL 查询参数获取 orderId
 	const search = useSearch({ from: "/settings/subscription/checkout" }) as { orderId?: string };
@@ -33,7 +39,67 @@ function SubscriptionCheckoutPage() {
 	// 格式化价格
 	const formatPrice = (price: number) => {
 		return (price / 100).toFixed(2);
-	}
+	};
+
+	// 计算折扣金额
+	const calculateDiscountAmount = (coupon: ValidatedCoupon, originalAmount: number): number => {
+		let discountAmount = 0;
+		
+		if (coupon.type === "percentage") {
+			discountAmount = Math.floor(originalAmount * coupon.value / 100);
+			// 如果有最大折扣限制，应用限制
+			if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
+				discountAmount = coupon.maxDiscountAmount;
+			}
+		} else if (coupon.type === "fixed_amount") {
+			discountAmount = coupon.value;
+		}
+		
+		// 确保折扣金额不超过原价
+		if (discountAmount > originalAmount) {
+			discountAmount = originalAmount;
+		}
+		
+		return discountAmount;
+	};
+
+	// 应用优惠券
+	const handleApplyCoupon = async () => {
+		if (!couponCode.trim()) {
+			setCouponError(t("settings.subscription.pleaseEnterCoupon"));
+			return;
+		}
+
+		setIsApplyingCoupon(true);
+		setCouponError(null);
+		
+		try {
+			const result = await couponService.validateCoupon(couponCode, orderId);
+			
+			// 检查最低订单金额
+			const originalPrice = subscribe?.originalPrice || subscribe?.price || orderData.totalAmount;
+			if (result.minOrderAmount > 0 && originalPrice < result.minOrderAmount) {
+				setCouponError(t("settings.subscription.minOrderAmountRequired", { 
+					amount: formatPrice(result.minOrderAmount) 
+				}));
+				return;
+			}
+			
+			setValidatedCoupon(result);
+		} catch (error: any) {
+			setCouponError(error.message || t("settings.subscription.invalidCoupon"));
+			setValidatedCoupon(null);
+		} finally {
+			setIsApplyingCoupon(false);
+		}
+	};
+
+	// 移除优惠券
+	const handleRemoveCoupon = () => {
+		setValidatedCoupon(null);
+		setCouponCode("");
+		setCouponError(null);
+	};
 
 	// 处理确认订购
 	const handleConfirmOrder = async () => {
@@ -211,20 +277,46 @@ function SubscriptionCheckoutPage() {
 
 								{/* 优惠 */}
 								{orderData.discountAmount > 0 && (
-									<div className="flex justify-between items-center text-green-500">
+									<div className="flex justify-between items-center text-primary">
 										<span>{t("settings.subscription.firstOrderDiscount")}</span>
 										<span>-¥{formatPrice(orderData.discountAmount)}</span>
 									</div>
 								)}
 
+								{/* 优惠券折扣 */}
+								{validatedCoupon && (() => {
+									const originalPrice = subscribe?.originalPrice || subscribe?.price || orderData.totalAmount;
+									const couponDiscount = calculateDiscountAmount(validatedCoupon, originalPrice);
+									return (
+										<div className="flex justify-between items-center text-primary">
+											<span>{validatedCoupon.name}</span>
+											<span>-¥{formatPrice(couponDiscount)}</span>
+										</div>
+									);
+								})()}
+
 								<div className="border-t pt-4">
 									<div className="flex justify-between items-center">
 										<span className="font-medium">{t("settings.subscription.totalAmount")}</span>
 										<div className="text-right">
-											<span className="text-2xl font-bold text-primary">¥{formatPrice(orderData.actualAmount)}</span>
-											{subscribe?.originalPrice && subscribe.originalPrice > orderData.actualAmount && (
-												<p className="text-xs text-muted-foreground line-through">¥{formatPrice(subscribe.originalPrice)}</p>
-											)}
+											{(() => {
+												const originalPrice = subscribe?.originalPrice || subscribe?.price || orderData.totalAmount;
+												let finalAmount = orderData.actualAmount;
+												
+												if (validatedCoupon) {
+													const couponDiscount = calculateDiscountAmount(validatedCoupon, originalPrice);
+													finalAmount = Math.max(0, finalAmount - couponDiscount);
+												}
+												
+												return (
+													<>
+														<span className="text-2xl font-bold text-primary">¥{formatPrice(finalAmount)}</span>
+														{(validatedCoupon || (subscribe?.originalPrice && subscribe.originalPrice > finalAmount)) && (
+															<p className="text-xs text-muted-foreground line-through">¥{formatPrice(originalPrice)}</p>
+														)}
+													</>
+												);
+											})()}
 										</div>
 									</div>
 								</div>
@@ -232,17 +324,59 @@ function SubscriptionCheckoutPage() {
 								{/* 优惠券 */}
 								<div className="pt-4 border-t">
 									<p className="text-sm font-medium mb-2">{t("settings.subscription.couponCode")}</p>
-									<div className="flex gap-2">
-										<input
-											type="text"
-											className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background"
-											placeholder={t("settings.subscription.enterCoupon")}
-											value={couponCode}
-											onChange={(e) => setCouponCode(e.target.value)}
-										/>
-										<Button variant="outline" size="sm">{t("settings.subscription.apply")}</Button>
-									</div>
-									<p className="text-xs text-muted-foreground mt-2">{t("settings.subscription.tryThese")}: WELCOME500, AI2026, SAVE20</p>
+									
+									{validatedCoupon ? (
+										<div className="flex items-center justify-between p-3 bg-primary/10 border border-primary/20 rounded-md">
+											<div className="flex items-center gap-2">
+												<CheckCircle2 className="h-4 w-4 text-primary" />
+												<span className="text-sm font-medium text-primary">{validatedCoupon.code}</span>
+												<span className="text-xs text-primary/80">- {validatedCoupon.name}</span>
+											</div>
+											<Button 
+												variant="ghost" 
+												size="sm" 
+												className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+												onClick={handleRemoveCoupon}
+											>
+												{t("common.remove")}
+											</Button>
+										</div>
+									) : (
+										<>
+											<div className="flex gap-2">
+												<input
+													type="text"
+													className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background"
+													placeholder={t("settings.subscription.enterCoupon")}
+													value={couponCode}
+													onChange={(e) => {
+														setCouponCode(e.target.value);
+														if (couponError) setCouponError(null);
+													}}
+													onKeyDown={(e) => {
+														if (e.key === 'Enter') {
+															handleApplyCoupon();
+														}
+													}}
+												/>
+												<Button 
+													variant="outline" 
+													size="sm" 
+													onClick={handleApplyCoupon}
+													disabled={isApplyingCoupon}
+												>
+													{isApplyingCoupon ? t("common.processing") : t("settings.subscription.apply")}
+												</Button>
+											</div>
+											{couponError && (
+												<div className="flex items-center gap-1 mt-2 text-destructive text-sm">
+													<XCircle className="h-4 w-4" />
+													<span>{couponError}</span>
+												</div>
+											)}
+											<p className="text-xs text-muted-foreground mt-2">{t("settings.subscription.tryThese")}: WELCOME500, AI2026, SAVE20</p>
+										</>
+									)}
 								</div>
 
 								{/* 确认订购按钮 */}
