@@ -1,4 +1,4 @@
-import { order, userCoupon, payment, subscribe, subscribeModel, aiModels } from "@/server/db/schemas";
+import { order, userCoupon, payment, subscribe, subscribeModel, aiModels, coupon } from "@/server/db/schemas";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getContext } from "@/server/service/context";
@@ -275,10 +275,12 @@ export const orderService = {
 			throw new Error("只能取消待支付订单");
 		}
 
+		const now = new Date();
+
 		await db.update(order).set({
 			status: "cancelled",
-			cancelledAt: new Date(),
-			updatedAt: new Date(),
+			cancelledAt: now,
+			updatedAt: now,
 		}).where(eq(order.id, id));
 
 		if (existingOrder.couponId) {
@@ -287,7 +289,7 @@ export const orderService = {
 				orderId: null,
 				discountAmount: null,
 				usedAt: null,
-				updatedAt: new Date(),
+				updatedAt: now,
 			}).where(eq(userCoupon.id, existingOrder.couponId));
 		}
 	},
@@ -312,11 +314,9 @@ export const orderService = {
 
 		let discountAmount = 0;
 		let finalCouponId = couponId || existingOrder.couponId;
+		let couponData = null;
 
 		if (finalCouponId || couponCode) {
-			const { coupon } = await import("@/server/db/schemas/coupon");
-			
-			let couponData = null;
 			if (finalCouponId) {
 				const couponResult = await db.select().from(coupon).where(eq(coupon.id, finalCouponId)).limit(1);
 				couponData = couponResult[0];
@@ -363,17 +363,67 @@ export const orderService = {
 			updatedAt: now,
 		}).where(eq(order.id, id));
 
-		if (finalCouponId) {
-			try {
+		await db.insert(payment).values({
+			id: nanoid(),
+			userId,
+			orderId: id,
+			channel: "other",
+			amount: actualAmount,
+			currency: "CNY",
+			status: "success",
+			remark: "模拟支付成功",
+			processedAt: now,
+			createdAt: now,
+			updatedAt: now,
+		});
+
+		if (finalCouponId && couponData) {
+			await db.update(coupon).set({
+				usageCount: sql`${coupon.usageCount} + 1`,
+				updatedAt: now,
+			}).where(eq(coupon.id, finalCouponId));
+
+			const existingUserCoupon = await db.select({
+				id: userCoupon.id,
+				userId: userCoupon.userId,
+				couponId: userCoupon.couponId,
+				status: userCoupon.status,
+			}).from(userCoupon).where(
+				and(
+					eq(userCoupon.userId, userId),
+					eq(userCoupon.couponId, finalCouponId),
+					eq(userCoupon.status, "unused")
+				)
+			).limit(1);
+
+			if (existingUserCoupon && existingUserCoupon.length > 0) {
 				await db.update(userCoupon).set({
 					status: "used",
 					orderId: id,
 					discountAmount,
 					usedAt: now,
 					updatedAt: now,
-				}).where(eq(userCoupon.couponId, finalCouponId));
-			} catch (e) {
-				console.log("Marking coupon used failed, but order confirmed successfully", e);
+				}).where(eq(userCoupon.id, existingUserCoupon[0].id));
+			} else {
+				const insertData: any = {
+					id: nanoid(),
+					userId,
+					couponId: finalCouponId,
+					couponCode: couponData.code,
+					status: "used" as const,
+					orderId: id,
+					discountAmount,
+					receivedAt: now,
+					usedAt: now,
+					createdAt: now,
+					updatedAt: now,
+				};
+				
+				if (couponData.endAt) {
+					insertData.expiredAt = couponData.endAt;
+				}
+				
+				await db.insert(userCoupon).values(insertData);
 			}
 		}
 	},

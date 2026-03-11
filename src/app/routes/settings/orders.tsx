@@ -40,8 +40,11 @@ function OrdersPage() {
 		return (price / 100).toFixed(2);
 	};
 
-	const formatDate = (dateString: string) => {
-		return new Date(dateString).toLocaleString("zh-CN");
+	const formatDate = (dateString: string | Date) => {
+		const date = new Date(dateString);
+		return date.toLocaleString("zh-CN", {
+			timeZone: "Asia/Shanghai"
+		});
 	};
 
 	const getStatusBadge = (status: string) => {
@@ -107,7 +110,7 @@ function OrdersPage() {
 			return formatDate(order.expiresAt);
 		} else if (order.subscribe?.duration) {
 			const endDate = new Date(new Date(order.createdAt).getTime() + order.subscribe.duration * 24 * 60 * 60 * 1000);
-			return formatDate(endDate.toISOString());
+			return formatDate(endDate);
 		}
 		return "-";
 	};
