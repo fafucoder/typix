@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app
 import { SettingsPageLayout } from "@/app/routes/settings/-components/SettingsPageLayout";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { createFileRoute, Outlet, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, useRouter, useLocation } from "@tanstack/react-router";
 import { Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useUIStore } from "@/app/stores";
@@ -34,6 +34,7 @@ function SubscriptionSettingsPage() {
 	const { isLogin } = useAuth();
 	const { openLoginModal } = useUIStore();
 	const router = useRouter();
+	const location = useLocation();
 	const [billingCycle, setBillingCycle] = useState<"monthly" | "quarterly" | "yearly">('monthly');
 	const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 	const [creatingOrder, setCreatingOrder] = useState<string | null>(null);
@@ -44,7 +45,7 @@ function SubscriptionSettingsPage() {
 	const { data: subscribesData, isLoading, error } = subscribeService.getSubscribesWithModels.swr("subscribes-with-models");
 
 	// 检查当前是否在子路由中（如 checkout 页面）
-	const currentPath = router.state.location.pathname;
+	const currentPath = location.pathname;
 	const isInSubRoute = currentPath.includes('/subscription/checkout');
 
 	// 当从子路由返回时，强制刷新数据
