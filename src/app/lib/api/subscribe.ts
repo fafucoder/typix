@@ -42,6 +42,8 @@ export interface CurrentSubscription {
 	startDate: string;
 	endDate: string;
 	status: string;
+	duration: number;
+	models: SubscribeModel[];
 }
 
 export const subscribeApi = {

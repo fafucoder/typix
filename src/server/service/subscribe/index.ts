@@ -31,6 +31,13 @@ export interface CurrentSubscription {
 	startDate: string;
 	endDate: string;
 	status: string;
+	duration: number;
+	models: Array<{
+		id: string;
+		name: string;
+		maxUsage: number;
+		modelType: ModelType;
+	}>;
 }
 
 export const subscribeService = {
@@ -135,33 +142,70 @@ export const subscribeService = {
 
 	// Get current subscription for user
 getCurrentSubscription: async (userId: string): Promise<{ success: boolean; data?: CurrentSubscription | null; error?: string }> => {
+		const { db } = getContext();
 		try {
 			// 第一步：获取用户的最新订阅订单
-			const orderQuery = "SELECT id, subscribe_id, created_at, expires_at, status FROM `order` WHERE user_id = ? AND type = ? AND status = ? ORDER BY created_at DESC LIMIT 1";
-			const [orders] = await pool.execute(orderQuery, [userId, "subscription", "paid"]);
+			const orderResult = await db.select().from(order).where(
+				and(
+					eq(order.userId, userId),
+					eq(order.type, "subscription"),
+					eq(order.status, "paid")
+				)
+			).orderBy(desc(order.createdAt)).limit(1);
 
-			if (!orders || !Array.isArray(orders) || orders.length === 0) {
+			if (!orderResult || orderResult.length === 0) {
 				return { success: true, data: null };
 			}
 
-			const orderData = orders[0] as any;
-			const subscribeId = orderData.subscribe_id;
+			const orderData = orderResult[0];
+			const subscribeId = orderData.subscribeId;
 
 			// 第二步：根据subscribeId获取订阅详情
-			const subscribeQuery = "SELECT id, name, duration FROM subscribe WHERE id = ?";
-			const [subscribes] = await pool.execute(subscribeQuery, [subscribeId]);
+			const subscribeResult = await db.select().from(subscribe).where(eq(subscribe.id, subscribeId)).limit(1);
 
-			if (!subscribes || !Array.isArray(subscribes) || subscribes.length === 0) {
+			if (!subscribeResult || subscribeResult.length === 0) {
 				return { success: true, data: null };
 			}
 
-			const subscribeData = subscribes[0] as any;
+			const subscribeData = subscribeResult[0];
+
+			// 第三步：获取订阅的模型信息
+			const modelsResult = await db
+				.select({
+					subscribeModel: {
+						id: subscribeModel.id,
+						maxUsage: subscribeModel.maxUsage,
+					},
+					model: {
+						id: aiModels.id,
+						modelId: aiModels.modelId,
+						name: aiModels.name,
+						type: aiModels.type,
+					}
+				})
+				.from(subscribeModel)
+				.innerJoin(aiModels, eq(subscribeModel.modelId, aiModels.id))
+				.where(
+					and(
+						eq(subscribeModel.subscribeId, subscribeId),
+						eq(subscribeModel.enabled, 1)
+					)
+				)
+				.orderBy(desc(subscribeModel.sortOrder));
+
 			const currentSubscription: CurrentSubscription = {
 				id: subscribeData.id,
 				name: subscribeData.name,
-				startDate: new Date(orderData.created_at).toISOString(),
-				endDate: orderData.expires_at ? new Date(orderData.expires_at).toISOString() : new Date(Date.now() + subscribeData.duration * 24 * 60 * 60 * 1000).toISOString(),
+				startDate: orderData.createdAt.toISOString(),
+				endDate: orderData.expiresAt ? orderData.expiresAt.toISOString() : new Date(Date.now() + subscribeData.duration * 24 * 60 * 60 * 1000).toISOString(),
 				status: orderData.status,
+				duration: subscribeData.duration,
+				models: modelsResult.map((m) => ({
+					id: m.subscribeModel.id,
+					name: m.model.name || m.model.modelId,
+					maxUsage: m.subscribeModel.maxUsage,
+					modelType: m.model.type
+				}))
 			};
 
 			return { success: true, data: currentSubscription };

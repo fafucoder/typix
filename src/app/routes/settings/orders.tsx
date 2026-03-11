@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/ca
 import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import { useAuth } from "@/app/hooks/useAuth";
-import { Package, Search, Eye, MoreVertical } from "lucide-react";
+import { Package, Search, Eye, MoreVertical, Sparkles } from "lucide-react";
+import { ModelIcon } from "@lobehub/icons";
+import { Suspense } from "react";
 import { Input } from "@/app/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/components/ui/table";
@@ -58,6 +60,8 @@ function OrdersPage() {
 		const statusInfo = statusMap[status] || { label: status, variant: "outline" };
 		return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
 	};
+
+
 
 	const handleCancelOrder = async (orderId: string) => {
 		try {
@@ -126,25 +130,75 @@ function OrdersPage() {
 				{/* 当前套餐 */}
 				<div className="space-y-4">
 					{currentSubscription ? (
-						<Card>
-							<CardContent className="p-6">
-								<div className="flex flex-col items-center justify-center text-center space-y-4">
-									<div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-										<Package className="w-8 h-8 text-primary" />
+						<>
+							<Card>
+								<CardContent className="p-6">
+									<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+										<div className="flex items-start gap-4">
+											<div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+												<Package className="w-8 h-8 text-primary" />
+											</div>
+											<div>
+												<h3 className="text-xl font-semibold">{currentSubscription.name}</h3>
+												<div className="mt-2 space-y-1 text-sm text-muted-foreground">
+													<p>
+														<span className="font-medium text-foreground">有效期：</span>
+														{formatDate(currentSubscription.startDate)} - {formatDate(currentSubscription.endDate)}
+													</p>
+													<p>
+														<span className="font-medium text-foreground">套餐时长：</span>
+														{currentSubscription.duration} 天
+													</p>
+												</div>
+											</div>
+										</div>
+										
+										<div className="flex items-center">
+											<Button asChild variant="default">
+												<Link to="/settings/subscription">{t("settings.subscription.manage")}</Link>
+											</Button>
+										</div>
 									</div>
-									<h3 className="text-xl font-semibold">{currentSubscription?.name || ''}</h3>
-									<p className="text-muted-foreground">
-										{currentSubscription?.endDate ? 
-											`${t("settings.subscription.expiresAt")}: ${formatDate(currentSubscription.endDate)}` : 
-											''
-										}
-									</p>
-									<Button asChild variant="default">
-										<Link to="/settings/subscription">{t("settings.subscription.manage")}</Link>
-									</Button>
-								</div>
-							</CardContent>
-						</Card>
+								</CardContent>
+							</Card>
+							
+							<Card>
+								<CardHeader className="pb-2">
+									<CardTitle>可用模型能力</CardTitle>
+								</CardHeader>
+								<CardContent className="pt-0">
+									<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+										{currentSubscription.models && currentSubscription.models.length > 0 ? (
+											currentSubscription.models.map((model) => (
+												<div key={model.id} className="flex items-center gap-3 p-3 rounded-md hover:bg-muted/30 transition-colors">
+													<Suspense fallback={
+														<div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+															<Sparkles className="w-4 h-4 text-muted-foreground" />
+														</div>
+													}>
+														<div className="w-8 h-8 flex items-center justify-center flex-shrink-0 overflow-hidden">
+															<ModelIcon
+																model={model.name || model.id}
+																size={28}
+																type="color"
+															/>
+														</div>
+													</Suspense>
+													<div className="flex-1 min-w-0">
+														<span className="text-sm font-medium block truncate">{model.name}</span>
+														<span className="text-xs text-muted-foreground">
+															{model.maxUsage === 0 ? '无限次' : `${model.maxUsage.toLocaleString()} 次`}
+														</span>
+													</div>
+												</div>
+											))
+										) : (
+											<p className="text-sm text-muted-foreground col-span-full text-center py-4">暂无模型信息</p>
+										)}
+									</div>
+								</CardContent>
+							</Card>
+						</>
 					) : (
 						<Card>
 							<CardContent className="p-8">
