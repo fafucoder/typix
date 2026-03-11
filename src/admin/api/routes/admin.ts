@@ -4,7 +4,6 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { type Env, ok } from "@/admin/api/util";
 import aiRouter from "./ai";
-import creationRouter from "./creation";
 
 const UpdateAdminSchema = z.object({
 	name: z.string().min(1).optional(),
@@ -174,7 +173,6 @@ const app = new Hono<Env>()
 
 		return c.json(ok({ image: uploadResult.imagePath }));
 	})
-	.route("/", aiRouter)
-	.route("/", creationRouter);
+	.route("/", aiRouter);
 
 export default app;

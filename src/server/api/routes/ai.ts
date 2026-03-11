@@ -5,6 +5,7 @@ import { ServiceException } from "@/server/lib/exception";
 import {
 	GetAiModelsByProviderIdSchema,
 	GetAiProviderByIdSchema,
+	GetEnabledAiProvidersWithModelsSchema,
 	UpdateAiModelSchema,
 	UpdateAiProviderSchema,
 	aiService,
@@ -16,6 +17,10 @@ import { type Env, authMiddleware, ok } from "../util";
 
 const app = new Hono<Env>()
 	.basePath("/ai")
+	.post("/getEnabledAiProvidersWithModels", zValidator("json", GetEnabledAiProvidersWithModelsSchema), async (c) => {
+		const req = c.req.valid("json");
+		return c.json(ok(await aiService.getEnabledAiProvidersWithModels(req, {})));
+	})
 	.use(authMiddleware)
 	.post("/getAiProviders", async (c) => {
 		const user = c.var.user!;
@@ -27,11 +32,6 @@ const app = new Hono<Env>()
 		const req = c.req.valid("json");
 
 		return c.json(ok(await aiService.getAiProviderById(req, { userId: user.id })));
-	})
-	.post("/getEnabledAiProvidersWithModels", async (c) => {
-		const user = c.var.user!;
-
-		return c.json(ok(await aiService.getEnabledAiProvidersWithModels({ userId: user.id })));
 	})
 	.post("/updateAiProvider", zValidator("json", UpdateAiProviderSchema), async (c) => {
 		const user = c.var.user!;

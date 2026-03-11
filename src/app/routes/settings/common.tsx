@@ -3,6 +3,7 @@ import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { Switch } from "@/app/components/ui/switch";
+import { useAuth } from "@/app/hooks/useAuth";
 import { useSettingsService } from "@/app/hooks/useService";
 import { THEME_COLOR_KEYS, getThemePreviewColors } from "@/app/lib/theme-colors";
 import { SettingsItem } from "@/app/routes/settings/-components/SettingsItem";
@@ -40,9 +41,10 @@ export const Route = createFileRoute("/settings/common")({
 function CommonSettingsPage() {
 	const settingsService = useSettingsService();
 	const { theme, themeColor, language, setTheme, setThemeColor, setLanguage } = useUIStore();
+	const { isLogin } = useAuth();
 
-	// Use SWR to get settings (mainly for initialization)
-	const { data: serverSettings, isLoading, error } = settingsService.getSettings.swr("settings");
+	// Use SWR to get settings (mainly for initialization) - only fetch if user is logged in
+	const { data: serverSettings, isLoading, error } = settingsService.getSettings.swr(isLogin ? "settings" : null);
 
 	// SWR mutation for updating settings
 	const { trigger: updateSettings, isMutating } = settingsService.updateSettings.swrMutation("update-settings");

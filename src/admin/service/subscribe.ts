@@ -12,6 +12,7 @@ export interface Subscribe {
 	credits: number;
 	duration: number;
 	sortOrder: number;
+	isPopular: number;
 	status: "active" | "inactive" | "deleted";
 	createdAt: string;
 	updatedAt: string;
@@ -41,6 +42,7 @@ export interface CreateSubscribeData {
 	credits: number;
 	duration: number;
 	sortOrder?: number;
+	isPopular?: number;
 	status?: "active" | "inactive";
 }
 
@@ -53,6 +55,7 @@ export interface UpdateSubscribeData {
 	credits?: number;
 	duration?: number;
 	sortOrder?: number;
+	isPopular?: number;
 	status?: "active" | "inactive";
 }
 
@@ -155,6 +158,7 @@ export const subscribeService = {
 				credits: data.credits,
 				duration: data.duration,
 				sortOrder: data.sortOrder || 0,
+				isPopular: data.isPopular || 0,
 				status: data.status || "active",
 				createdAt: now,
 				updatedAt: now,
@@ -189,6 +193,7 @@ export const subscribeService = {
 			if (data.credits !== undefined) updateData.credits = data.credits;
 			if (data.duration !== undefined) updateData.duration = data.duration;
 			if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder;
+			if (data.isPopular !== undefined) updateData.isPopular = data.isPopular;
 			if (data.status !== undefined) updateData.status = data.status;
 
 			await db

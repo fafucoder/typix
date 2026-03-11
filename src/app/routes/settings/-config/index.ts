@@ -1,4 +1,4 @@
-import { Bot, Database, Key, Settings2, User } from "lucide-react";
+import { Key, Settings2, User, CreditCard } from "lucide-react";
 import type { SettingsSection } from "../-components/SettingsNavigation";
 
 /**
@@ -14,22 +14,22 @@ export const settingsSections: SettingsSection[] = [
 		path: "/settings/common",
 	},
 	{
-		id: "provider",
-		title: "settings.sections.provider", // i18n key
-		icon: Bot,
-		path: "/settings/provider",
-	},
-	{
 		id: "account",
 		title: "settings.sections.account", // i18n key
 		icon: User,
 		path: "/settings/account",
 	},
 	{
-		id: "database",
-		title: "settings.sections.database", // i18n key
-		icon: Database,
-		path: "/settings/database",
+		id: "subscription",
+		title: "settings.sections.subscriptionPlans", // i18n key
+		icon: CreditCard,
+		path: "/settings/subscription",
+	},
+	{
+		id: "orders",
+		title: "settings.sections.billing", // i18n key
+		icon: CreditCard,
+		path: "/settings/orders",
 	},
 ];
 

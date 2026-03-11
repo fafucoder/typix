@@ -5,6 +5,7 @@ import { Label } from "@/app/components/ui/label";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useToast } from "@/app/hooks/useToast";
 import { useUIStore } from "@/app/stores";
+import { fetchWithAuth } from "@/app/lib/api-client";
 import { Eye, EyeOff, Key, User, Mail, Lock, Copy, Check } from "lucide-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -72,7 +73,7 @@ function AccountSettingsPage() {
 			setIsSubmitting(true);
 
 			// Call custom API endpoint to update password
-			const response = await fetch("/api/settings/updatePassword", {
+			const response = await fetchWithAuth("/api/settings/updatePassword", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

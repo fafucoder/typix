@@ -78,3 +78,7 @@ export function ok<T>(data?: T): ApiResult<T> {
 export function error<T>(code: Code, message: string): ApiResult<T> {
 	return { code, message };
 }
+
+export function unauthorized(message: string): ApiResult<null> {
+	return { code: "unauthorized", message };
+}

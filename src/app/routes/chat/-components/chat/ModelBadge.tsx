@@ -6,9 +6,10 @@ interface ModelBadgeProps {
 	currentModel: string;
 	onModelChange: (provider: string, model: string) => void;
 	isNewChat?: boolean;
+	modelType?: "text2image" | "text2video";
 }
 
-export function ModelBadge({ currentProvider, currentModel, onModelChange, isNewChat = false }: ModelBadgeProps) {
+export function ModelBadge({ currentProvider, currentModel, onModelChange, isNewChat = false, modelType = "text2image" }: ModelBadgeProps) {
 	return (
 		<div className="flex items-center gap-2">
 			{currentProvider && <ProviderIcon provider={currentProvider} type="mono" className="h-6 w-6" />}
@@ -17,6 +18,7 @@ export function ModelBadge({ currentProvider, currentModel, onModelChange, isNew
 				currentModel={currentModel}
 				onModelChange={onModelChange}
 				isNewChat={isNewChat}
+				modelType={modelType}
 			/>
 		</div>
 	);

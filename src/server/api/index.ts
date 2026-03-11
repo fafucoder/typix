@@ -11,9 +11,11 @@ import { ServiceException } from "../lib/exception";
 import { initContext } from "../service/context";
 import aiRouter from "./routes/ai";
 import chatsRouter from "./routes/chat";
-import creationRouter from "./routes/creation";
 import fileRouter from "./routes/file";
 import userRouter from "./routes/settings";
+import subscribeRouter from "./routes/subscribe";
+import orderRouter from "./routes/order";
+import paymentRouter from "./routes/payment";
 import type { ApiResult, Env } from "./util";
 
 const factory = createFactory<Env>({
@@ -57,6 +59,9 @@ const factory = createFactory<Env>({
 					: undefined,
 				providerCloudflareBuiltin: c.env.PROVIDER_CLOUDFLARE_BUILTIN === "true" || false,
 			});
+
+
+
 			await next();
 		});
 	},
@@ -146,7 +151,9 @@ const route = app
 	.route("/", userRouter)
 	.route("/", aiRouter)
 	.route("/", fileRouter)
-	.route("/", creationRouter)
+	.route("/", subscribeRouter)
+	.route("/", orderRouter)
+	.route("/", paymentRouter)
 
 export type AppType = typeof route;
 export default app;

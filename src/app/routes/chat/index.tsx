@@ -1,6 +1,7 @@
 import { useAuth } from "@/app/hooks/useAuth";
 import { useAiService } from "@/app/hooks/useService";
 import { useToast } from "@/app/hooks/useToast";
+import { useUIStore } from "@/app/stores";
 import { cn } from "@/app/lib/utils";
 import { ChatArea, type ChatAreaRef } from "@/app/routes/chat/-components/chat/ChatArea";
 import { ChatInput } from "@/app/routes/chat/-components/chat/ChatInput";
@@ -34,6 +35,8 @@ function ChatPageContent() {
 	const chatAreaRef = useRef<ChatAreaRef>(null);
 	const { toast } = useToast();
 	const { t } = useTranslation();
+	const { isLogin } = useAuth();
+	const { openLoginModal } = useUIStore();
 	const aiService = useAiService();
 
 	// Local state for model selection when no chat is selected
@@ -109,6 +112,12 @@ function ChatPageContent() {
 	};
 	// Handle chat creation with URL update
 	const handleCreateChat = async () => {
+		// Check if user is logged in
+		if (!isLogin) {
+			openLoginModal();
+			return;
+		}
+
 		try {
 			const newChatId = await createNewChat();
 			if (newChatId) {
@@ -176,7 +185,12 @@ function ChatPageContent() {
 	) => {
 		try {
 			// Execute sendMessage and wait for completion
-			await sendMessage(content, imageFiles, undefined, imageCount, aspectRatio);
+			const result = await sendMessage(content, imageFiles, undefined, imageCount, aspectRatio);
+			// If sendMessage returns null, it means user is not logged in and login modal is already opened
+			// No need to show error toast or scroll in this case
+			if (result === null) {
+				return;
+			}
 		} catch (error) {
 			console.error("Error sending message:", error);
 
@@ -252,6 +266,7 @@ function ChatPageContent() {
 					// Pass selected provider/model for when there's no current chat
 					fallbackProvider={selectedProvider}
 					fallbackModel={selectedModel}
+					modelType="text2image"
 				/>
 				{/* Chat Input */}
 				<ChatInput

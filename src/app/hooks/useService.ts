@@ -126,12 +126,11 @@ function createEnhancedService<T>(baseService: T): EnhancedService<T> {
  * @returns The appropriate service based on authentication status with SWR methods
  */
 function useService<T extends Record<string, any>>(defaultService: T, apiService: T): EnhancedService<T> {
-	const { isLogin } = useAuth();
-
-	// Memoize service selection to prevent unnecessary re-computations
+	// Always use API service to ensure consistent behavior regardless of login status
+	// This ensures that getEnabledAiProvidersWithModels works for both logged in and logged out users
 	const service = useMemo(() => {
-		return isLogin ? apiService : defaultService;
-	}, [isLogin, apiService, defaultService]);
+		return apiService;
+	}, [apiService]);
 
 	// Memoize enhanced service creation
 	return useMemo(() => {
@@ -146,7 +145,8 @@ function useService<T extends Record<string, any>>(defaultService: T, apiService
 async function doRequest<T>(apiCall: (...args: any[]) => Promise<Response>, ...args: any[]): Promise<T> {
 	try {
 		// API calls do not pass localUserId, only when there are more than 1 arguments does it pass the first argument as request body
-		const resp = args.length > 1 ? await apiCall({ json: args[0] }) : await apiCall();
+		// For POST requests, always send a request body (even if empty) to avoid server errors
+		const resp = args.length > 1 ? await apiCall({ json: args[0] }) : await apiCall({ json: {} });
 
 		if (!resp.ok) {
 			throw new ServiceException("error", `API request failed with status: ${resp.status}`);
@@ -177,11 +177,34 @@ function createApiServiceProxy<T extends Record<string, any>>(apiEndpoints: Reco
 	const proxy = new Proxy({} as T, {
 		get(target, prop: string | symbol) {
 			if (typeof prop === "string") {
-				// Look for a property with $post method
+				// Look for a property with $post or $get method
 				const dynamicEndpoint = apiEndpoints[prop];
 				if (dynamicEndpoint && typeof dynamicEndpoint.$post === "function") {
 					return async (...args: any[]) => {
-						return await doRequest(dynamicEndpoint.$post, ...args);
+						// For POST requests, always send a request body (even if empty)
+						const resp = args.length > 0 ? await dynamicEndpoint.$post({ json: args[0] }) : await dynamicEndpoint.$post({ json: {} });
+						if (!resp.ok) {
+							throw new ServiceException("error", `API request failed with status: ${resp.status}`);
+						}
+						const data = (await resp.json()) as ApiResult<any>;
+						if (data.code !== "ok") {
+							throw new ServiceException(data.code, data.message || "API request failed");
+						}
+						return data.data || ({} as any);
+					};
+				}
+				if (dynamicEndpoint && typeof dynamicEndpoint.$get === "function") {
+					return async (...args: any[]) => {
+						// For GET requests, do not send a request body
+						const resp = await dynamicEndpoint.$get();
+						if (!resp.ok) {
+							throw new ServiceException("error", `API request failed with status: ${resp.status}`);
+						}
+						const data = (await resp.json()) as ApiResult<any>;
+						if (data.code !== "ok") {
+							throw new ServiceException(data.code, data.message || "API request failed");
+						}
+						return data.data || ({} as any);
 					};
 				}
 

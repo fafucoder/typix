@@ -1,7 +1,7 @@
 import { useIsMobile } from "@/app/hooks/useMobile";
 import { SettingsNavigation } from "@/app/routes/settings/-components/SettingsNavigation";
 import { findSectionById, getDefaultSection, isValidSectionId, settingsSections } from "@/app/routes/settings/-config";
-import { Outlet, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { LucideSettings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,11 +13,10 @@ export const Route = createFileRoute("/settings")({
 function SettingsLayoutComponent() {
 	const isMobile = useIsMobile();
 	const navigate = useNavigate();
-	const router = useRouter();
+	const location = useLocation();
 	const { t } = useTranslation();
 
 	// Get current active section from the current route
-	const currentPath = router.state.location.pathname;
 	const getActiveSectionFromPath = (path: string): string => {
 		// Extract the last segment of the path after /settings/
 		const pathSegments = path.split("/").filter(Boolean);
@@ -32,13 +31,13 @@ function SettingsLayoutComponent() {
 		return getDefaultSection().id;
 	};
 
-	const [activeSection, setActiveSection] = useState(getActiveSectionFromPath(currentPath));
+	const [activeSection, setActiveSection] = useState(getActiveSectionFromPath(location.pathname));
 
 	// Update active section when route changes
 	useEffect(() => {
-		const newActiveSection = getActiveSectionFromPath(currentPath);
+		const newActiveSection = getActiveSectionFromPath(location.pathname);
 		setActiveSection(newActiveSection);
-	}, [currentPath, settingsSections]);
+	}, [location.pathname, settingsSections]);
 
 	// Navigate to a section
 	const navigateToSection = (sectionId: string) => {

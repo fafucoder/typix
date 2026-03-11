@@ -7,6 +7,10 @@ import { type Env, authMiddleware, ok } from "../util";
 const app = new Hono<Env>()
 	.basePath("/settings")
 	.use(authMiddleware)
+	.get("/", async (c) => {
+		const user = c.var.user!;
+		return c.json(ok(await settingsService.getSettings({ userId: user.id })));
+	})
 	.post("/updateSettings", zValidator("json", UpdateSettingsSchema), async (c) => {
 		const user = c.var.user!;
 		const req = c.req.valid("json");

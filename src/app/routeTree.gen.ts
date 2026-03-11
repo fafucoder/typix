@@ -11,14 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as VideoIndexRouteImport } from './routes/video/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ChatIndexRouteImport } from './routes/chat/index'
-import { Route as SettingsDatabaseRouteImport } from './routes/settings/database'
+import { Route as SettingsSubscriptionRouteImport } from './routes/settings/subscription'
+import { Route as SettingsOrdersRouteImport } from './routes/settings/orders'
 import { Route as SettingsCommonRouteImport } from './routes/settings/common'
 import { Route as SettingsAccountRouteImport } from './routes/settings/account'
-import { Route as SettingsProviderRouteRouteImport } from './routes/settings/provider/route'
-import { Route as SettingsProviderIndexRouteImport } from './routes/settings/provider/index'
-import { Route as SettingsProviderProviderIdRouteImport } from './routes/settings/provider/$providerId'
+import { Route as SettingsSubscriptionCheckoutRouteImport } from './routes/settings/subscription/checkout'
 
 const SettingsRouteRoute = SettingsRouteRouteImport.update({
   id: '/settings',
@@ -28,6 +28,11 @@ const SettingsRouteRoute = SettingsRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VideoIndexRoute = VideoIndexRouteImport.update({
+  id: '/video/',
+  path: '/video/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -40,9 +45,14 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
   path: '/chat/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsDatabaseRoute = SettingsDatabaseRouteImport.update({
-  id: '/database',
-  path: '/database',
+const SettingsSubscriptionRoute = SettingsSubscriptionRouteImport.update({
+  id: '/subscription',
+  path: '/subscription',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsOrdersRoute = SettingsOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
 const SettingsCommonRoute = SettingsCommonRouteImport.update({
@@ -55,99 +65,92 @@ const SettingsAccountRoute = SettingsAccountRouteImport.update({
   path: '/account',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
-const SettingsProviderRouteRoute = SettingsProviderRouteRouteImport.update({
-  id: '/provider',
-  path: '/provider',
-  getParentRoute: () => SettingsRouteRoute,
-} as any)
-const SettingsProviderIndexRoute = SettingsProviderIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SettingsProviderRouteRoute,
-} as any)
-const SettingsProviderProviderIdRoute =
-  SettingsProviderProviderIdRouteImport.update({
-    id: '/$providerId',
-    path: '/$providerId',
-    getParentRoute: () => SettingsProviderRouteRoute,
+const SettingsSubscriptionCheckoutRoute =
+  SettingsSubscriptionCheckoutRouteImport.update({
+    id: '/checkout',
+    path: '/checkout',
+    getParentRoute: () => SettingsSubscriptionRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
-  '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
   '/settings/account': typeof SettingsAccountRoute
   '/settings/common': typeof SettingsCommonRoute
-  '/settings/database': typeof SettingsDatabaseRoute
+  '/settings/orders': typeof SettingsOrdersRoute
+  '/settings/subscription': typeof SettingsSubscriptionRouteWithChildren
   '/chat/': typeof ChatIndexRoute
   '/settings/': typeof SettingsIndexRoute
-  '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
-  '/settings/provider/': typeof SettingsProviderIndexRoute
+  '/video/': typeof VideoIndexRoute
+  '/settings/subscription/checkout': typeof SettingsSubscriptionCheckoutRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/common': typeof SettingsCommonRoute
-  '/settings/database': typeof SettingsDatabaseRoute
+  '/settings/orders': typeof SettingsOrdersRoute
+  '/settings/subscription': typeof SettingsSubscriptionRouteWithChildren
   '/chat': typeof ChatIndexRoute
   '/settings': typeof SettingsIndexRoute
-  '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
-  '/settings/provider': typeof SettingsProviderIndexRoute
+  '/video': typeof VideoIndexRoute
+  '/settings/subscription/checkout': typeof SettingsSubscriptionCheckoutRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
-  '/settings/provider': typeof SettingsProviderRouteRouteWithChildren
   '/settings/account': typeof SettingsAccountRoute
   '/settings/common': typeof SettingsCommonRoute
-  '/settings/database': typeof SettingsDatabaseRoute
+  '/settings/orders': typeof SettingsOrdersRoute
+  '/settings/subscription': typeof SettingsSubscriptionRouteWithChildren
   '/chat/': typeof ChatIndexRoute
   '/settings/': typeof SettingsIndexRoute
-  '/settings/provider/$providerId': typeof SettingsProviderProviderIdRoute
-  '/settings/provider/': typeof SettingsProviderIndexRoute
+  '/video/': typeof VideoIndexRoute
+  '/settings/subscription/checkout': typeof SettingsSubscriptionCheckoutRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/settings'
-    | '/settings/provider'
     | '/settings/account'
     | '/settings/common'
-    | '/settings/database'
+    | '/settings/orders'
+    | '/settings/subscription'
     | '/chat/'
     | '/settings/'
-    | '/settings/provider/$providerId'
-    | '/settings/provider/'
+    | '/video/'
+    | '/settings/subscription/checkout'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/settings/account'
     | '/settings/common'
-    | '/settings/database'
+    | '/settings/orders'
+    | '/settings/subscription'
     | '/chat'
     | '/settings'
-    | '/settings/provider/$providerId'
-    | '/settings/provider'
+    | '/video'
+    | '/settings/subscription/checkout'
   id:
     | '__root__'
     | '/'
     | '/settings'
-    | '/settings/provider'
     | '/settings/account'
     | '/settings/common'
-    | '/settings/database'
+    | '/settings/orders'
+    | '/settings/subscription'
     | '/chat/'
     | '/settings/'
-    | '/settings/provider/$providerId'
-    | '/settings/provider/'
+    | '/video/'
+    | '/settings/subscription/checkout'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
   ChatIndexRoute: typeof ChatIndexRoute
+  VideoIndexRoute: typeof VideoIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -166,6 +169,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/video/': {
+      id: '/video/'
+      path: '/video'
+      fullPath: '/video/'
+      preLoaderRoute: typeof VideoIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/': {
       id: '/settings/'
       path: '/'
@@ -180,11 +190,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/database': {
-      id: '/settings/database'
-      path: '/database'
-      fullPath: '/settings/database'
-      preLoaderRoute: typeof SettingsDatabaseRouteImport
+    '/settings/subscription': {
+      id: '/settings/subscription'
+      path: '/subscription'
+      fullPath: '/settings/subscription'
+      preLoaderRoute: typeof SettingsSubscriptionRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/orders': {
+      id: '/settings/orders'
+      path: '/orders'
+      fullPath: '/settings/orders'
+      preLoaderRoute: typeof SettingsOrdersRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
     '/settings/common': {
@@ -201,58 +218,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAccountRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
-    '/settings/provider': {
-      id: '/settings/provider'
-      path: '/provider'
-      fullPath: '/settings/provider'
-      preLoaderRoute: typeof SettingsProviderRouteRouteImport
-      parentRoute: typeof SettingsRouteRoute
-    }
-    '/settings/provider/': {
-      id: '/settings/provider/'
-      path: '/'
-      fullPath: '/settings/provider/'
-      preLoaderRoute: typeof SettingsProviderIndexRouteImport
-      parentRoute: typeof SettingsProviderRouteRoute
-    }
-    '/settings/provider/$providerId': {
-      id: '/settings/provider/$providerId'
-      path: '/$providerId'
-      fullPath: '/settings/provider/$providerId'
-      preLoaderRoute: typeof SettingsProviderProviderIdRouteImport
-      parentRoute: typeof SettingsProviderRouteRoute
+    '/settings/subscription/checkout': {
+      id: '/settings/subscription/checkout'
+      path: '/checkout'
+      fullPath: '/settings/subscription/checkout'
+      preLoaderRoute: typeof SettingsSubscriptionCheckoutRouteImport
+      parentRoute: typeof SettingsSubscriptionRoute
     }
   }
 }
 
-interface SettingsProviderRouteRouteChildren {
-  SettingsProviderProviderIdRoute: typeof SettingsProviderProviderIdRoute
-  SettingsProviderIndexRoute: typeof SettingsProviderIndexRoute
+interface SettingsSubscriptionRouteChildren {
+  SettingsSubscriptionCheckoutRoute: typeof SettingsSubscriptionCheckoutRoute
 }
 
-const SettingsProviderRouteRouteChildren: SettingsProviderRouteRouteChildren = {
-  SettingsProviderProviderIdRoute: SettingsProviderProviderIdRoute,
-  SettingsProviderIndexRoute: SettingsProviderIndexRoute,
+const SettingsSubscriptionRouteChildren: SettingsSubscriptionRouteChildren = {
+  SettingsSubscriptionCheckoutRoute: SettingsSubscriptionCheckoutRoute,
 }
 
-const SettingsProviderRouteRouteWithChildren =
-  SettingsProviderRouteRoute._addFileChildren(
-    SettingsProviderRouteRouteChildren,
-  )
+const SettingsSubscriptionRouteWithChildren =
+  SettingsSubscriptionRoute._addFileChildren(SettingsSubscriptionRouteChildren)
 
 interface SettingsRouteRouteChildren {
-  SettingsProviderRouteRoute: typeof SettingsProviderRouteRouteWithChildren
   SettingsAccountRoute: typeof SettingsAccountRoute
   SettingsCommonRoute: typeof SettingsCommonRoute
-  SettingsDatabaseRoute: typeof SettingsDatabaseRoute
+  SettingsOrdersRoute: typeof SettingsOrdersRoute
+  SettingsSubscriptionRoute: typeof SettingsSubscriptionRouteWithChildren
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
-  SettingsProviderRouteRoute: SettingsProviderRouteRouteWithChildren,
   SettingsAccountRoute: SettingsAccountRoute,
   SettingsCommonRoute: SettingsCommonRoute,
-  SettingsDatabaseRoute: SettingsDatabaseRoute,
+  SettingsOrdersRoute: SettingsOrdersRoute,
+  SettingsSubscriptionRoute: SettingsSubscriptionRouteWithChildren,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 
@@ -264,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
   ChatIndexRoute: ChatIndexRoute,
+  VideoIndexRoute: VideoIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

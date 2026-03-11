@@ -9,13 +9,17 @@ interface ModelSelectorProps {
 	onModelChange: (provider: string, model: string) => void;
 	// Flag to indicate if this is for a new chat (should auto-select) or existing chat (should not auto-select)
 	isNewChat?: boolean;
+	// Model type filter (text2image or text2video)
+	modelType?: "text2image" | "text2video";
 }
 
-export function ModelSelector({ currentProvider, currentModel, onModelChange, isNewChat = false }: ModelSelectorProps) {
+export function ModelSelector({ currentProvider, currentModel, onModelChange, isNewChat = false, modelType = "text2image" }: ModelSelectorProps) {
 	const aiService = useAiService();
 
 	// Fetch AI providers and models
-	const { data: providers, isLoading } = aiService.getEnabledAiProvidersWithModels.swr("ai-providers-with-models");
+	const { data: providers, isLoading } = aiService.getEnabledAiProvidersWithModels.swr(`ai-providers-with-models-${modelType}`, {
+		modelType,
+	});
 
 	// No auto-selection logic here - it's handled in the parent component
 

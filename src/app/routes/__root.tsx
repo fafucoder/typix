@@ -2,10 +2,8 @@ import { LoginModal } from "@/app/components/login/LoginModal";
 import { GlobalNavigation } from "@/app/components/navigation/GlobalNavigation";
 import { Toaster } from "@/app/components/ui/sonner";
 import { useAuth } from "@/app/hooks/useAuth";
-import { useSettingsService } from "@/app/hooks/useService";
 import { useThemeManager } from "@/app/hooks/useTheme";
-import { initDb } from "@/app/lib/db-client";
-import { initContext } from "@/server/service/context";
+import { apiClient } from "@/app/lib/api-client";
 import { mode } from "@/server/lib/env";
 import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -23,8 +21,6 @@ function RootComponent() {
 	const [initError, setInitError] = useState<string | null>(null);
 	const [hasAuthResolved, setHasAuthResolved] = useState(false);
 	const { i18n, t } = useTranslation();
-
-	const settingsService = useSettingsService();
 
 	// Apply theme and theme color with automatic system theme detection
 	useThemeManager(theme, themeColor, setTheme);
@@ -142,13 +138,21 @@ function RootComponent() {
 	}, [language, i18n]);
 
 	async function initSettings() {
+		// Only fetch settings if user is logged in
+		if (!isLogin) {
+			return;
+		}
 		try {
-			const settings = await settingsService.getSettings();
-			if (settings) {
-				// Apply settings to UI store if they exist
-				if (settings.theme) setTheme(settings.theme);
-				if (settings.themeColor) setThemeColor(settings.themeColor);
-				if (settings.language) setLanguage(settings.language);
+			// Use API client to fetch settings from server
+			const response = await apiClient.api.settings.$get();
+			if (response.ok) {
+				const result = await response.json();
+				if (result.data) {
+					// Apply settings to UI store if they exist
+					if (result.data.theme) setTheme(result.data.theme);
+					if (result.data.themeColor) setThemeColor(result.data.themeColor);
+					if (result.data.language) setLanguage(result.data.language);
+				}
 			}
 		} catch (error) {
 			console.warn("Failed to load initial settings:", error);
@@ -191,7 +195,7 @@ function RootComponent() {
 		}
 	}, [hasAuthResolved, authLoading, isLogin, initError, openLoginModal, mode]);
 
-	// Initialize database and load settings on app startup
+	// Initialize app settings on startup
 	useEffect(() => {
 		// Only initialize once auth has resolved for the first time
 		if (!hasAuthResolved) {
@@ -202,16 +206,9 @@ function RootComponent() {
 
 		const initialize = async () => {
 			try {
-				// Initialize database
-				const db = await initDb();
-				if (db) {
-					initContext({
-						db: db,
-						providerCloudflareBuiltin: import.meta.env.PROVIDER_CLOUDFLARE_BUILTIN === "true",
-					});
-					await initSettings();
-					isMobileCleanup = initIsMobile();
-				}
+				// App only interacts with server, no local database needed
+				await initSettings();
+				isMobileCleanup = initIsMobile();
 			} catch (err) {
 				console.error("Failed to initialize:", err);
 				setInitError(err instanceof Error ? err.message : "Failed to initialize application");

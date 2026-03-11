@@ -1,7 +1,6 @@
+import "dotenv/config";
 import indexHtml from "../../index.html?raw";
 import app from "./api";
-
-import "dotenv/config";
 
 app.get("/*", (c) =>
 	c.html(

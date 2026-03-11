@@ -132,6 +132,7 @@ export const subscribe = mysqlTable("subscribe", {
 	credits: int("credits").default(0).notNull(), // 包含的积分/次数
 	duration: int("duration").default(0).notNull(), // 订阅时长（天），0表示永久
 	sortOrder: int("sort_order").default(0).notNull(), // 排序
+	isPopular: int("is_popular").default(0).notNull(), // 是否最受欢迎 (1=true, 0=false)
 	status: varchar("status", { length: 20, enum: subscribeStatus })
 		.$defaultFn(() => "active")
 		.notNull(),

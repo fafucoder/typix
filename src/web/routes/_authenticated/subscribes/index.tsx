@@ -80,6 +80,7 @@ function SubscribesPage() {
     credits: null as number | null,
     duration: null as number | null,
     sortOrder: null as number | null,
+    isPopular: 0 as number,
     status: 'active' as 'active' | 'inactive',
   })
 
@@ -115,6 +116,7 @@ function SubscribesPage() {
       credits: null,
       duration: null,
       sortOrder: null,
+      isPopular: 0,
       status: 'active',
     })
   }
@@ -136,6 +138,7 @@ function SubscribesPage() {
       credits: subscribe.credits,
       duration: subscribe.duration,
       sortOrder: subscribe.sortOrder,
+      isPopular: subscribe.isPopular || 0,
       status: subscribe.status === 'deleted' ? 'inactive' : subscribe.status,
     })
     setIsEditDialogOpen(true)
@@ -335,6 +338,7 @@ function SubscribesPage() {
                 <TableHead>积分/时长</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead>排序</TableHead>
+                <TableHead>最受欢迎</TableHead>
                 <TableHead className='text-right'>操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -392,6 +396,17 @@ function SubscribesPage() {
                       </span>
                     </TableCell>
                     <TableCell>{subscribe.sortOrder || 0}</TableCell>
+                    <TableCell>
+                      {subscribe.isPopular === 1 ? (
+                        <span className='px-2 py-1 rounded-full text-xs bg-primary text-white'>
+                          是
+                        </span>
+                      ) : (
+                        <span className='px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700'>
+                          否
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className='text-right'>
                       <Button
                         size='icon'
@@ -554,15 +569,32 @@ function SubscribesPage() {
                 />
               </div>
             )}
-            <div className='grid gap-2'>
-              <Label htmlFor='sortOrder'>排序</Label>
-              <Input
-                id='sortOrder'
-                type='number'
-                value={formData.sortOrder || ''}
-                onChange={(e) => setFormData({ ...formData, sortOrder: e.target.value === '' ? null : Number(e.target.value) })}
-                placeholder='数字越大越靠前'
-              />
+            <div className='grid grid-cols-2 gap-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='sortOrder'>排序</Label>
+                <Input
+                  id='sortOrder'
+                  type='number'
+                  value={formData.sortOrder || ''}
+                  onChange={(e) => setFormData({ ...formData, sortOrder: e.target.value === '' ? null : Number(e.target.value) })}
+                  placeholder='数字越大越靠前'
+                />
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='isPopular'>最受欢迎</Label>
+                <Select
+                  value={formData.isPopular === 1 ? '1' : '0'}
+                  onValueChange={(value) => setFormData({ ...formData, isPopular: value === '1' ? 1 : 0 })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='0'>否</SelectItem>
+                    <SelectItem value='1'>是</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>

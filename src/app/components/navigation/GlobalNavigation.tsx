@@ -1,7 +1,7 @@
 import { Button } from "@/app/components/ui/button";
 import { cn } from "@/app/lib/utils";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { MessageSquare, Settings, User, LogOut } from "lucide-react";
+import { MessageSquare, Settings, User, LogOut, Video } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useUIStore } from "@/app/stores";
@@ -20,9 +20,15 @@ export function GlobalNavigation({ className }: GlobalNavigationProps) {
   const navigationItems = [
     {
       id: "chat",
-      label: t("navigation.chat"),
+      label: t("navigation.text2image"),
       icon: MessageSquare,
       href: "/chat",
+    },
+    {
+      id: "video",
+      label: t("navigation.text2video"),
+      icon: Video,
+      href: "/video",
     },
     {
       id: "settings",

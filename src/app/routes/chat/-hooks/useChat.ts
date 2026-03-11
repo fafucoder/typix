@@ -1,6 +1,7 @@
 import { useAuth } from "@/app/hooks/useAuth";
 import { useAiService } from "@/app/hooks/useService";
 import { useChatService } from "@/app/hooks/useService";
+import { useUIStore } from "@/app/stores";
 import type { AspectRatio } from "@/server/ai/types/api";
 import type { chatService } from "@/server/service/chat";
 import { localUserId } from "@/server/service/context";
@@ -26,6 +27,7 @@ const guestUser: User = {
 export const useChat = (initialChatId?: string, selectedProvider?: string, selectedModel?: string) => {
 	const { isLoading: authLoading, user, isLogin } = useAuth();
 	const { t } = useTranslation();
+	const { openLoginModal } = useUIStore();
 	const chatService = useChatService();
 	const aiService = useAiService();
 	const [currentChatId, setCurrentChatId] = useState<string | null>(initialChatId || null);
@@ -86,13 +88,13 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 		}
 	}, [initialChatId, lastInitialChatId]);
 
-	// Fetch chats using chatService.getChats - always fetch, let server handle auth
+	// Fetch chats using chatService.getChats only if user is logged in
 	const {
 		data: chatsData,
 		error: chatsError,
 		isLoading: isLoadingChats,
 		mutate: chatsMutate,
-	} = chatService.getChats.swr("chats"); // Track when initial auth and data loading is complete
+	} = chatService.getChats.swr(isLogin ? "chats" : null); // Track when initial auth and data loading is complete
 	useEffect(() => {
 		if (!authLoading && !isLoadingChats && !isInitialLoadComplete) {
 			setIsInitialLoadComplete(true);
@@ -156,6 +158,12 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 	}, [currentChatData, currentChatId]);
 	const createNewChat = useCallback(async () => {
 		try {
+			// Check if user is logged in
+			if (!isLogin) {
+				openLoginModal();
+				return null;
+			}
+
 			// Use selected provider/model or fall back to first available
 			let provider = selectedProvider;
 			let model = selectedModel;
@@ -193,7 +201,7 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 			throw error; // Re-throw to let caller handle
 		}
 		return null;
-	}, [createChatTrigger, chatsMutate, selectedProvider, selectedModel, getDefaultProviderAndModel, t]);
+	}, [createChatTrigger, chatsMutate, selectedProvider, selectedModel, getDefaultProviderAndModel, t, isLogin, openLoginModal]);
 	const deleteChat = useCallback(
 		async (chatId: string) => {
 			try {
@@ -238,6 +246,12 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 			imageCount?: number,
 			aspectRatio?: AspectRatio,
 		): Promise<string | null> => {
+			// Check if user is logged in
+			if (!isLogin) {
+				openLoginModal();
+				return null;
+			}
+
 			const chatId = targetChatId || currentChatId;
 
 			// Convert image files to attachments with base64 data
@@ -497,7 +511,7 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 			// Return the chat ID to caller
 			return chatId;
 		},
-		[
+		[ 
 			currentChatId,
 			sendMessageTrigger,
 			currentChatMutate,
@@ -510,6 +524,8 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 			selectedModel,
 			getDefaultProviderAndModel,
 			t,
+			isLogin,
+			openLoginModal,
 		],
 	);
 	const switchChat = useCallback((chatId: string) => {

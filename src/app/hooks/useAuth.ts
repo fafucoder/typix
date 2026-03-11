@@ -1,4 +1,5 @@
 import { authClient } from "@/app/lib/auth-client";
+import { fetchWithAuth } from "@/app/lib/api-client";
 import { useState, useEffect } from "react";
 
 interface UserWithRole {
@@ -31,7 +32,7 @@ function useAuthWrap() {
 			if (session.data?.user) {
 				setIsLoadingUser(true);
 				try {
-					const response = await fetch('/api/settings/getUserInfo', {
+					const response = await fetchWithAuth('/api/settings/getUserInfo', {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',

@@ -36,7 +36,7 @@ export const sidebarData: SidebarData = {
           icon: Sparkles,
         },
         {
-          title: '订阅管理',
+          title: '订阅计划',
           url: '/subscribes',
           icon: Package,
         },

@@ -10,6 +10,7 @@ export interface Subscribe {
   credits: number
   duration: number
   sortOrder: number
+  isPopular: number
   status: 'active' | 'inactive' | 'deleted'
   createdAt: string
   updatedAt: string
@@ -31,6 +32,7 @@ export interface CreateSubscribeData {
   credits: number
   duration: number
   sortOrder?: number
+  isPopular?: number
   status?: 'active' | 'inactive'
 }
 
@@ -43,6 +45,7 @@ export interface UpdateSubscribeData {
   credits?: number
   duration?: number
   sortOrder?: number
+  isPopular?: number
   status?: 'active' | 'inactive'
 }
 
@@ -99,20 +102,11 @@ export const subscribeService = {
   },
 
   // Delete subscribe
-  deleteSubscribe: async (id: string): Promise<{ success: boolean }> => {
+  deleteSubscribe: async (id: string): Promise<void> => {
     const response = await apiClient.api.subscribes[':id'].$delete({
       param: { id },
     })
-    const result: ApiResponse<{ success: boolean }> = await response.json()
-    return result.data || { success: false }
-  },
-
-  // Delete multiple subscribes
-  deleteSubscribes: async (ids: string[]): Promise<{ success: boolean }> => {
-    const response = await apiClient.api.subscribes['delete-batch'].$post({
-      json: { ids },
-    })
-    const result: ApiResponse<{ success: boolean }> = await response.json()
-    return result.data || { success: false }
+    const result: ApiResponse<void> = await response.json()
+    if (result.code !== 'ok') throw new Error(result.message || 'Failed to delete subscribe')
   },
 }

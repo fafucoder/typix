@@ -28,6 +28,8 @@ interface ChatAreaProps {
 	// Fallback values when there's no current chat
 	fallbackProvider?: string;
 	fallbackModel?: string;
+	// Model type (text2image or text2video)
+	modelType?: "text2image" | "text2video";
 }
 
 export interface ChatAreaRef {
@@ -47,6 +49,7 @@ export const ChatArea = forwardRef<ChatAreaRef, ChatAreaProps>(
 			onDeleteMessage,
 			fallbackProvider,
 			fallbackModel,
+			modelType = "text2image",
 		},
 		ref,
 	) => {
@@ -181,11 +184,12 @@ export const ChatArea = forwardRef<ChatAreaRef, ChatAreaProps>(
 								</div>
 								{/* Model Badge */}
 								<ModelBadge
-									currentProvider={displayChat.provider}
-									currentModel={displayChat.model}
-									onModelChange={handleModelChange}
-									isNewChat={isNewChat}
-								/>
+						currentProvider={displayChat.provider}
+						currentModel={displayChat.model}
+						onModelChange={handleModelChange}
+						isNewChat={isNewChat}
+						modelType={modelType}
+					/>
 							</div>
 						</div>
 					</div>
@@ -208,9 +212,14 @@ export const ChatArea = forwardRef<ChatAreaRef, ChatAreaProps>(
 											</div>
 										</div>
 										<h3 className="mb-3 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text font-bold text-2xl text-transparent">
-											{t("chat.generateImage")}
-										</h3>
-										<p className="max-w-sm text-muted-foreground leading-relaxed">{t("chat.welcomeMessage")}</p>
+							{modelType === "text2video" ? t("chat.generateVideo") : t("chat.generateImage")}
+						</h3>
+						<p className="max-w-sm text-muted-foreground leading-relaxed">
+							{modelType === "text2video" 
+								? t("chat.welcomeMessageVideo", "描述您想要创建的视频！让您的想象力尽情发挥。") 
+								: t("chat.welcomeMessage")
+							}
+						</p>
 										<div className="mt-8 flex justify-center gap-2">
 											<div className="h-1 w-8 animate-pulse rounded-full bg-primary/60" />
 											<div className="h-1 w-4 animate-pulse rounded-full bg-primary/40 delay-75" />

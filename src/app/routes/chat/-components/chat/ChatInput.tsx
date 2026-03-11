@@ -16,9 +16,10 @@ interface ChatInputProps {
 	disabled?: boolean;
 	currentProvider?: string;
 	currentModel?: string;
+	placeholder?: string;
 }
 
-export function ChatInput({ onSendMessage, disabled, currentProvider, currentModel }: ChatInputProps) {
+export function ChatInput({ onSendMessage, disabled, currentProvider, currentModel, placeholder }: ChatInputProps) {
 	const { t } = useTranslation();
 	const { toast } = useToast();
 	const [message, setMessage] = useState("");
@@ -243,25 +244,25 @@ export function ChatInput({ onSendMessage, disabled, currentProvider, currentMod
 					{/* Text input container */}
 					<div className="relative rounded-xl border border-border/50 bg-card/80 shadow-sm transition-all duration-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20">
 						<Textarea
-							ref={textareaRef}
-							value={message}
-							onChange={(e) => setMessage(e.target.value)}
-							onKeyDown={handleKeyDown}
-							onCompositionStart={handleCompositionStart}
-							onCompositionEnd={handleCompositionEnd}
-							placeholder={t("chat.typeMessage")}
-							disabled={disabled}
-							className={cn(
-								"max-h-60 min-h-[120px] resize-none border-0 bg-transparent pr-4 pb-16 placeholder:text-muted-foreground/60 focus-visible:ring-0",
-								"dark:!bg-transparent", // 强制覆盖shadcn默认背景
-							)}
-							rows={4}
-							onInput={(e) => {
-								const target = e.target as HTMLTextAreaElement;
-								target.style.height = "auto";
-								target.style.height = `${Math.min(target.scrollHeight, 240)}px`;
-							}}
-						/>
+					ref={textareaRef}
+					value={message}
+					onChange={(e) => setMessage(e.target.value)}
+					onKeyDown={handleKeyDown}
+					onCompositionStart={handleCompositionStart}
+					onCompositionEnd={handleCompositionEnd}
+					placeholder={placeholder || t("chat.typeMessage")}
+					disabled={disabled}
+					className={cn(
+						"max-h-60 min-h-[120px] resize-none border-0 bg-transparent pr-4 pb-16 placeholder:text-muted-foreground/60 focus-visible:ring-0",
+						"dark:!bg-transparent", // 强制覆盖shadcn默认背景
+					)}
+					rows={4}
+					onInput={(e) => {
+						const target = e.target as HTMLTextAreaElement;
+						target.style.height = "auto";
+						target.style.height = `${Math.min(target.scrollHeight, 240)}px`;
+					}}
+				/>
 
 						{/* Bottom buttons area */}
 						<div className="absolute inset-x-3 bottom-3 flex items-center justify-between">
