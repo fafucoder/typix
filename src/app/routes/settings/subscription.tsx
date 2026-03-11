@@ -175,7 +175,12 @@ function SubscriptionSettingsPage() {
 								onClick={() => setSelectedPlanId(plan.id)}
 							>
 								<CardHeader>
-									<CardTitle>{plan.name}</CardTitle>
+									<div className="flex items-center gap-2">
+										<CardTitle>{plan.name}</CardTitle>
+										{plan.isPopular === true && (
+											<span className="px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded">{t("settings.subscription.popular")}</span>
+										)}
+									</div>
 									<CardDescription>{plan.description}</CardDescription>
 								</CardHeader>
 								<CardContent className="space-y-6">

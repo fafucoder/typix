@@ -172,6 +172,7 @@ export const orderService = {
 			...orderData,
 			subscribe: subscribeData ? {
 				...subscribeData,
+				isPopular: subscribeData.isPopular === 1,
 				models,
 			} : undefined,
 		} as OrderWithDetails;

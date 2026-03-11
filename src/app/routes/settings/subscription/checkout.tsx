@@ -106,7 +106,7 @@ function SubscriptionCheckoutPage() {
 									<div>
 										<div className="flex items-center gap-2 mb-2">
 											<CardTitle className="text-xl">{subscribe?.name || t("settings.subscription.plan")}</CardTitle>
-											{subscribe?.isPopular && (
+											{subscribe?.isPopular ===true && (
 												<span className="px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded">{t("settings.subscription.popular")}</span>
 											)}
 										</div>

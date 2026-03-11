@@ -31,7 +31,7 @@ export interface OrderWithDetails extends Order {
 		credits: number;
 		duration: number;
 		sortOrder: number;
-		isPopular: number;
+		isPopular: boolean;
 		status: "active" | "inactive" | "deleted";
 		models?: Array<{
 			id: string;
