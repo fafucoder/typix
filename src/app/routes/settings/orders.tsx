@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/ca
 import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import { useAuth } from "@/app/hooks/useAuth";
-import { Package, Search, Eye, MoreVertical, Sparkles } from "lucide-react";
+import { Package, Search, Eye, MoreVertical, Sparkles, X } from "lucide-react";
 import { ModelIcon } from "@lobehub/icons";
 import { Suspense } from "react";
 import { Input } from "@/app/components/ui/input";
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/app/components/ui/pagination";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/app/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
 
 export const Route = createFileRoute("/settings/orders")({
 	component: OrdersPage,
@@ -28,6 +29,8 @@ function OrdersPage() {
 	const [page, setPage] = useState(1);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
+	const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
+	const [showDetailDialog, setShowDetailDialog] = useState(false);
 	const pageSize = 10; // 十条一个分页
 	const orderService = useOrderService();
 	const subscribeService = useSubscribeService();
@@ -70,6 +73,11 @@ function OrdersPage() {
 		} catch (error) {
 			console.error("取消订单失败:", error);
 		}
+	};
+
+	const handleViewDetail = (order: OrderWithDetails) => {
+		setSelectedOrder(order);
+		setShowDetailDialog(true);
 	};
 
 	const isLoading = ordersLoading || subscribeLoading;
@@ -277,7 +285,7 @@ function OrdersPage() {
 														</Button>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end">
-														<DropdownMenuItem>
+														<DropdownMenuItem onClick={() => handleViewDetail(order)}>
 															<Eye size={16} className="mr-2" />
 															查看详情
 														</DropdownMenuItem>
@@ -339,6 +347,160 @@ function OrdersPage() {
 					</div>
 				)}
 			</div>
+
+			{/* 订单详情对话框 */}
+			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+				<DialogContent className="max-w-2xl">
+					<DialogHeader>
+						<DialogTitle>订单详情</DialogTitle>
+					</DialogHeader>
+					{selectedOrder && (
+						<div className="space-y-6">
+							{/* 订单基本信息 */}
+							<Card>
+								<CardHeader>
+									<CardTitle>基本信息</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-3">
+									<div className="flex justify-between">
+										<span className="text-muted-foreground">订单号</span>
+										<span className="font-medium">{selectedOrder.orderNo}</span>
+									</div>
+									<div className="flex justify-between">
+										<span className="text-muted-foreground">订单状态</span>
+										{getStatusBadge(selectedOrder.status)}
+									</div>
+									<div className="flex justify-between">
+										<span className="text-muted-foreground">订单类型</span>
+										<span>{selectedOrder.type === "subscription" ? "订阅" : "充值"}</span>
+									</div>
+									<div className="flex justify-between">
+										<span className="text-muted-foreground">创建时间</span>
+										<span>{formatDate(selectedOrder.createdAt)}</span>
+									</div>
+									{selectedOrder.expiresAt && (
+										<div className="flex justify-between">
+											<span className="text-muted-foreground">到期时间</span>
+											<span>{formatDate(selectedOrder.expiresAt)}</span>
+										</div>
+									)}
+								</CardContent>
+							</Card>
+
+							{/* 套餐信息 */}
+							{selectedOrder.subscribe && (
+								<Card>
+									<CardHeader>
+										<CardTitle>套餐信息</CardTitle>
+									</CardHeader>
+									<CardContent className="space-y-3">
+										<div className="flex justify-between">
+											<span className="text-muted-foreground">套餐名称</span>
+											<span className="font-medium">{selectedOrder.subscribe.name}</span>
+										</div>
+										{selectedOrder.subscribe.description && (
+											<div className="flex justify-between">
+												<span className="text-muted-foreground">套餐描述</span>
+												<span>{selectedOrder.subscribe.description}</span>
+											</div>
+										)}
+										<div className="flex justify-between">
+											<span className="text-muted-foreground">套餐时长</span>
+											<span>{selectedOrder.subscribe.duration} 天</span>
+										</div>
+									</CardContent>
+								</Card>
+							)}
+
+							{/* 金额信息 */}
+							<Card>
+								<CardHeader>
+									<CardTitle>金额信息</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-3">
+									<div className="flex justify-between">
+										<span className="text-muted-foreground">原价</span>
+										<span>¥{formatPrice(selectedOrder.totalAmount)}</span>
+									</div>
+									{selectedOrder.discountAmount > 0 && (
+										<div className="flex justify-between">
+											<span className="text-muted-foreground">优惠金额</span>
+											<span className="text-red-500">-¥{formatPrice(selectedOrder.discountAmount)}</span>
+										</div>
+									)}
+									<div className="flex justify-between text-lg font-medium">
+										<span>实付金额</span>
+										<span className="text-primary">¥{formatPrice(selectedOrder.actualAmount)}</span>
+									</div>
+								</CardContent>
+							</Card>
+
+							{/* 优惠券信息 */}
+							{selectedOrder.coupon && (
+								<Card>
+									<CardHeader>
+										<CardTitle>优惠券信息</CardTitle>
+									</CardHeader>
+									<CardContent className="space-y-3">
+										<div className="flex justify-between">
+											<span className="text-muted-foreground">优惠券码</span>
+											<span className="font-medium">{selectedOrder.coupon.code}</span>
+										</div>
+										<div className="flex justify-between">
+											<span className="text-muted-foreground">优惠券名称</span>
+											<span>{selectedOrder.coupon.name}</span>
+										</div>
+										{selectedOrder.coupon.description && (
+											<div className="flex justify-between">
+												<span className="text-muted-foreground">优惠券描述</span>
+												<span>{selectedOrder.coupon.description}</span>
+											</div>
+										)}
+									</CardContent>
+								</Card>
+							)}
+
+							{/* 支付记录 */}
+							{selectedOrder.payments && selectedOrder.payments.length > 0 && (
+								<Card>
+									<CardHeader>
+										<CardTitle>支付记录</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<div className="space-y-2">
+											{selectedOrder.payments.map((payment) => (
+												<div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+													<div>
+														<div className="font-medium">金额: ¥{formatPrice(payment.amount)}</div>
+														{payment.processedAt && (
+															<div className="text-sm text-muted-foreground">
+																{formatDate(payment.processedAt)}
+															</div>
+														)}
+													</div>
+													<Badge>{payment.status}</Badge>
+												</div>
+											))}
+										</div>
+									</CardContent>
+								</Card>
+							)}
+
+							{/* 备注 */}
+							{selectedOrder.remark && (
+								<Card>
+									<CardHeader>
+										<CardTitle>备注</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<p className="text-muted-foreground">{selectedOrder.remark}</p>
+									</CardContent>
+								</Card>
+							)}
+						</div>
+					)}
+				</DialogContent>
+			</Dialog>
 		</SettingsPageLayout>
 	);
 }

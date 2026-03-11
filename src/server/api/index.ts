@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 import { type AuthConfig, createAuth } from "../lib/auth";
 import { ServiceException } from "../lib/exception";
 import { initContext } from "../service/context";
+import { setupOrderExpirationListener } from "../service/order/expire";
 import aiRouter from "./routes/ai";
 import chatsRouter from "./routes/chat";
 import fileRouter from "./routes/file";
@@ -156,6 +157,8 @@ const route = app
 	.route("/", orderRouter)
 	.route("/", paymentRouter)
 	.route("/", couponRoutes)
+
+setupOrderExpirationListener();
 
 export type AppType = typeof route;
 export default app;

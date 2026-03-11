@@ -106,7 +106,7 @@ export const orderService = {
 			couponId: data.couponId || null,
 			status: "pending",
 			remark: data.remark || null,
-			expiresAt: new Date(now.getTime() + 30 * 60 * 1000), // 30分钟后过期
+			expiresAt: new Date(now.getTime() + 10 * 60 * 1000),
 			cancelledAt: null,
 			createdAt: now,
 			updatedAt: now,
