@@ -128,6 +128,29 @@ const app = new Hono<Env>()
 		} catch (error: any) {
 			return c.json({ code: "error", message: error.message || "取消订单失败" }, 500);
 		}
+	})
+	.post("/:id/confirm", async (c) => {
+		const context = getContext();
+		const user = c.var.user;
+		const userId = user?.id;
+		if (!userId) {
+			return c.json(unauthorized("请先登录"), 401);
+		}
+
+		const id = c.req.param("id");
+		if (!id) {
+			return c.json({ code: "error", message: "缺少订单ID" }, 400);
+		}
+
+		try {
+			const body = await c.req.json();
+			const { couponId, couponCode } = body;
+			
+			await orderService.confirmOrder(id, userId, couponId, couponCode);
+			return c.json(ok({ message: "订单确认成功" }));
+		} catch (error: any) {
+			return c.json({ code: "error", message: error.message || "确认订单失败" }, 500);
+		}
 	});
 
 export default app;

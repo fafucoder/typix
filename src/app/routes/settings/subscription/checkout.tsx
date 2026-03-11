@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/ca
 import { SettingsPageLayout } from "@/app/routes/settings/-components/SettingsPageLayout";
 import { useState, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { createFileRoute, useSearch, Link } from "@tanstack/react-router";
+import { createFileRoute, useSearch, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ChevronRight, Sparkles, CheckCircle2, XCircle } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useUIStore } from "@/app/stores";
@@ -20,6 +20,7 @@ function SubscriptionCheckoutPage() {
 	const { t } = useTranslation();
 	const { isLogin } = useAuth();
 	const { openLoginModal } = useUIStore();
+	const navigate = useNavigate();
 	const [isConfirming, setIsConfirming] = useState<boolean>(false);
 	const [couponCode, setCouponCode] = useState<string>("");
 	const [validatedCoupon, setValidatedCoupon] = useState<ValidatedCoupon | null>(null);
@@ -34,7 +35,7 @@ function SubscriptionCheckoutPage() {
 	const orderService = useOrderService();
 
 	// 从 API 获取订单详情
-	const { data: orderData, isLoading, error } = orderService.getOrder(orderId || "").swr(orderId ? `order-${orderId}` : "");
+	const { data: orderData, isLoading, error, mutate } = orderService.getOrder(orderId || "").swr(orderId ? `order-${orderId}` : "");
 
 	// 格式化价格
 	const formatPrice = (price: number) => {
@@ -108,14 +109,20 @@ function SubscriptionCheckoutPage() {
 			return;
 		}
 
-		if (!orderData) {
+		if (!orderData || !orderId) {
 			return;
 		}
 
 		setIsConfirming(true);
 		try {
-			// TODO: 调用支付接口
-			alert(t("settings.subscription.paymentInDevelopment"));
+			await orderService.confirmOrder(
+				orderId, 
+				validatedCoupon?.id, 
+				validatedCoupon?.code
+			);
+			
+			await mutate();
+			navigate({ to: "/settings/orders" });
 		} catch (error: any) {
 			alert(error.message || t("settings.subscription.paymentFailed"));
 		} finally {

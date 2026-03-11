@@ -132,4 +132,19 @@ export const orderApi = {
 		}
 		return result.data;
 	},
+
+	confirmOrder: async (id: string, couponId?: string, couponCode?: string): Promise<{ message: string }> => {
+		const response = await fetchWithAuth(`/api/orders/${id}/confirm`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ couponId, couponCode }),
+		});
+		const result = await response.json();
+		if (result.code !== "ok") {
+			throw new Error(result.message || "确认订单失败");
+		}
+		return result.data;
+	},
 };

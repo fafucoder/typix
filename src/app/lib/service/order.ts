@@ -18,5 +18,9 @@ export const useOrderService = () => {
 		cancelOrder: async (id: string) => {
 			return orderApi.cancelOrder(id);
 		},
+
+		confirmOrder: async (id: string, couponId?: string, couponCode?: string) => {
+			return orderApi.confirmOrder(id, couponId, couponCode);
+		},
 	};
 };

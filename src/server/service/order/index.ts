@@ -291,4 +291,90 @@ export const orderService = {
 			}).where(eq(userCoupon.id, existingOrder.couponId));
 		}
 	},
+
+	confirmOrder: async (id: string, userId: string, couponId?: string, couponCode?: string): Promise<void> => {
+		const { db } = getContext();
+		const existingOrderResult = await db.select().from(order).where(eq(order.id, id)).limit(1);
+
+		if (!existingOrderResult || existingOrderResult.length === 0) {
+			throw new Error("订单不存在");
+		}
+
+		const existingOrder = existingOrderResult[0];
+
+		if (existingOrder.userId !== userId) {
+			throw new Error("无权操作此订单");
+		}
+
+		if (existingOrder.status !== "pending") {
+			throw new Error("订单状态不正确");
+		}
+
+		let discountAmount = 0;
+		let finalCouponId = couponId || existingOrder.couponId;
+
+		if (finalCouponId || couponCode) {
+			const { coupon } = await import("@/server/db/schemas/coupon");
+			
+			let couponData = null;
+			if (finalCouponId) {
+				const couponResult = await db.select().from(coupon).where(eq(coupon.id, finalCouponId)).limit(1);
+				couponData = couponResult[0];
+			} else if (couponCode) {
+				const couponResult = await db.select().from(coupon).where(eq(coupon.code, couponCode)).limit(1);
+				couponData = couponResult[0];
+				if (couponData) {
+					finalCouponId = couponData.id;
+				}
+			}
+
+			if (couponData) {
+				if (couponData.type === "percentage") {
+					discountAmount = Math.floor(existingOrder.totalAmount * couponData.value / 100);
+					if (couponData.maxDiscountAmount && discountAmount > couponData.maxDiscountAmount) {
+						discountAmount = couponData.maxDiscountAmount;
+					}
+				} else if (couponData.type === "fixed_amount") {
+					discountAmount = couponData.value;
+				}
+
+				if (discountAmount > existingOrder.totalAmount) {
+					discountAmount = existingOrder.totalAmount;
+				}
+			}
+		}
+
+		const actualAmount = Math.max(0, existingOrder.totalAmount - discountAmount);
+		if (actualAmount < 0) {
+			throw new Error("订单金额不能为负");
+		}
+
+		const now = new Date();
+		const subscribeData = await db.select().from(subscribe).where(eq(subscribe.id, existingOrder.subscribeId)).limit(1);
+		const duration = subscribeData[0]?.duration || 30;
+		const expiresAt = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000);
+
+		await db.update(order).set({
+			status: "paid",
+			discountAmount,
+			actualAmount,
+			couponId: finalCouponId,
+			expiresAt,
+			updatedAt: now,
+		}).where(eq(order.id, id));
+
+		if (finalCouponId) {
+			try {
+				await db.update(userCoupon).set({
+					status: "used",
+					orderId: id,
+					discountAmount,
+					usedAt: now,
+					updatedAt: now,
+				}).where(eq(userCoupon.couponId, finalCouponId));
+			} catch (e) {
+				console.log("Marking coupon used failed, but order confirmed successfully", e);
+			}
+		}
+	},
 };
