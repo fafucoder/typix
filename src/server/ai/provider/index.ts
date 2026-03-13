@@ -6,11 +6,13 @@ import { default as cloudflare } from "./cloudflare";
 import { default as doubao } from "./doubao";
 import { default as fal } from "./fal";
 import { default as flux } from "./flux";
+import { default as glm } from "./glm";
 import { default as google } from "./google";
+import { default as minimax } from "./minimax";
 import { default as openAI } from "./openai";
 import { default as qwen } from "./qwen";
 
-export const AI_PROVIDERS = [qwen, doubao, cloudflare, google, openAI, flux, fal].map(enhancedProvider);
+export const AI_PROVIDERS = [qwen, doubao, cloudflare, google, openAI, flux, fal, minimax, glm].map(enhancedProvider);
 
 export function getDefaultProvider() {
 	return AI_PROVIDERS[0]!;

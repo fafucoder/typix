@@ -7,6 +7,7 @@ import { ServiceException } from "@/server/lib/exception";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
 import z from "zod/v4";
+import { customAlphabet } from "nanoid/non-secure";
 import { aiService } from "../ai";
 import { type RequestContext, getContext } from "../context";
 import { getFileData, getFileUrl, saveFiles } from "../file/storage";
@@ -49,15 +50,21 @@ const createChat = async (req: CreateChat, ctx: RequestContext) => {
 	const { db } = getContext();
 	const { userId } = ctx;
 
-	const [chat] = await db
+	const chatId = customAlphabet("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 16)();
+
+	await db
 		.insert(chats)
 		.values({
+			id: chatId,
 			userId,
 			title: req.title,
 			provider: req.provider,
 			model: req.model,
-		})
-		.returning();
+		});
+
+	const chat = await db.query.chats.findFirst({
+		where: eq(chats.id, chatId),
+	});
 
 	if (req.content) {
 		const messageResult = await createMessage(
@@ -261,7 +268,7 @@ const deleteMessage = async (req: DeleteMessage, ctx: RequestContext) => {
 	await db.delete(messages).where(eq(messages.id, req.messageId));
 
 	// Update chat timestamp
-	await db.update(chats).set({ updatedAt: new Date().toISOString() }).where(eq(chats.id, message.chatId));
+	await db.update(chats).set({ updatedAt: new Date() }).where(eq(chats.id, message.chatId));
 
 	return true;
 };
@@ -415,7 +422,7 @@ const executeImageGeneration = async (params: GenerationParams, ctx: RequestCont
 				.set({
 					status: "failed",
 					errorReason: result.errorReason,
-					updatedAt: now.toISOString(),
+					updatedAt: now,
 				})
 				.where(eq(messageGenerations.id, generationId));
 			return;
@@ -426,13 +433,13 @@ const executeImageGeneration = async (params: GenerationParams, ctx: RequestCont
 		// Update generation with result URLs
 		await db
 			.update(messageGenerations)
-			.set({
-				status: "completed",
-				fileIds,
-				generationTime: Date.now() - now.getTime(),
-				updatedAt: now.toISOString(),
-			})
-			.where(eq(messageGenerations.id, generationId));
+		.set({
+			status: "completed",
+			fileIds,
+			generationTime: Date.now() - now.getTime(),
+			updatedAt: now,
+		})
+		.where(eq(messageGenerations.id, generationId));
 	} catch (error) {
 		console.error("Error generating image:", error);
 		await db
@@ -440,7 +447,7 @@ const executeImageGeneration = async (params: GenerationParams, ctx: RequestCont
 			.set({
 				status: "failed",
 				errorReason: error instanceof ConfigInvalidError ? "CONFIG_INVALID" : "UNKNOWN",
-				updatedAt: new Date().toISOString(),
+				updatedAt: new Date(),
 			})
 			.where(eq(messageGenerations.id, generationId));
 		return;
@@ -455,21 +462,29 @@ const createMessage = async (req: CreateMessage, ctx: RequestContext) => {
 	const chat = await db.query.chats.findFirst({
 		where: eq(chats.id, req.chatId),
 	});
+
 	if (!chat || chat.userId !== userId) {
 		throw new ServiceException("not_found", "Chat not found");
 	}
 
+	// Generate user message ID
+	const userMessageId = customAlphabet("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 16)();
+
 	// Add user message
-	const [userMessage] = await db
+	await db
 		.insert(messages)
 		.values({
-			userId: userId,
+			id: userMessageId,
+			userId,
 			chatId: req.chatId,
 			content: req.content,
 			role: "user",
 			type: req.type,
-		})
-		.returning();
+		});
+
+	const userMessage = await db.query.messages.findFirst({
+		where: eq(messages.id, userMessageId),
+	});
 
 	if (!userMessage) {
 		throw new ServiceException("error", "Failed to create user message");
@@ -507,13 +522,17 @@ const createMessage = async (req: CreateMessage, ctx: RequestContext) => {
 	}
 
 	// Update chat timestamp
-	await db.update(chats).set({ updatedAt: new Date().toISOString() }).where(eq(chats.id, req.chatId));
+	await db.update(chats).set({ updatedAt: new Date() }).where(eq(chats.id, req.chatId));
+
+	// Generate generation ID
+	const generationId = customAlphabet("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 16)();
 
 	// Create generation record
-	const [generation] = await db
+	await db
 		.insert(messageGenerations)
 		.values({
-			userId: userId,
+			id: generationId,
+			userId,
 			prompt: req.content,
 			provider: req.provider,
 			model: req.model,
@@ -523,21 +542,32 @@ const createMessage = async (req: CreateMessage, ctx: RequestContext) => {
 				imageCount: req.imageCount,
 				aspectRatio: req.aspectRatio,
 			} as any,
-		})
-		.returning();
+		});
+
+	const generation = await db.query.messageGenerations.findFirst({
+		where: eq(messageGenerations.id, generationId),
+	});
+
+	// Generate assistant message ID
+	const assistantMessageId = customAlphabet("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 16)();
 
 	// Add assistant message
-	const [assistantMessage] = await db
+	await db
 		.insert(messages)
 		.values({
-			userId: userId,
+			id: assistantMessageId,
+			userId,
 			chatId: req.chatId,
 			content: "",
 			role: "assistant",
 			type: "image",
 			generationId: generation!.id,
-		})
-		.returning();
+		});
+
+	const assistantMessage = await db.query.messages.findFirst({
+		where: eq(messages.id, assistantMessageId),
+	});
+
 	if (!assistantMessage) {
 		throw new ServiceException("error", "Failed to create assistant message");
 	}
@@ -583,14 +613,14 @@ const getGenerationStatus = async (req: GetGenerationStatus, ctx: RequestContext
 		if (elapsedMinutes > 5) {
 			// Mark as failed due to timeout
 			type UpdateGeneration = Pick<typeof generation, "status" | "errorReason" | "updatedAt">;
-			const updateData = {
+		const updateData = {
 				status: "failed",
 				errorReason: "TIMEOUT",
-				updatedAt: now.toISOString(),
+				updatedAt: now,
 			} as UpdateGeneration;
-			await db.update(messageGenerations).set(updateData).where(eq(messageGenerations.id, req.generationId));
+		await db.update(messageGenerations).set(updateData).where(eq(messageGenerations.id, req.generationId));
 
-			return {
+		return {
 				...generation,
 				...updateData,
 				resultUrls: undefined,
@@ -726,7 +756,7 @@ const regenerateMessage = async (req: RegenerateMessage, ctx: RequestContext) =>
 			fileIds: null, // Clear previous results
 			errorReason: null, // Clear previous errors
 			generationTime: null, // Clear previous timing
-			updatedAt: new Date().toISOString(),
+			updatedAt: new Date(),
 		})
 		.where(eq(messageGenerations.id, originalGeneration.id));
 
@@ -739,7 +769,7 @@ const regenerateMessage = async (req: RegenerateMessage, ctx: RequestContext) =>
 		.where(eq(messages.id, req.messageId));
 
 	// Update chat timestamp
-	await db.update(chats).set({ updatedAt: new Date().toISOString() }).where(eq(chats.id, chat.id));
+	await db.update(chats).set({ updatedAt: new Date() }).where(eq(chats.id, chat.id));
 
 	// Don't execute image generation here - client will call createMessageGenerate
 	// This avoids CF Worker 30-second timeout limitation
