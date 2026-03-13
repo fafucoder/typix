@@ -94,7 +94,7 @@ const getChats = async (ctx: RequestContext) => {
 	const { userId } = ctx;
 
 	const userChats = await db.query.chats.findMany({
-		where: and(eq(chats.userId, userId), eq(chats.deleted, false)),
+		where: and(eq(chats.userId, userId), eq(chats.deleted, 0)),
 		orderBy: [desc(chats.createdAt)],
 	});
 
@@ -110,7 +110,7 @@ const getChatById = async (req: GetChatById, ctx: RequestContext) => {
 	const { userId } = ctx;
 
 	const chat = await db.query.chats.findFirst({
-		where: and(eq(chats.id, req.id), eq(chats.userId, userId), eq(chats.deleted, false)),
+		where: and(eq(chats.id, req.id), eq(chats.userId, userId), eq(chats.deleted, 0)),
 		with: {
 			messages: {
 				orderBy: [messages.createdAt],

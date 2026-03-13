@@ -4,6 +4,8 @@ import { subscribe } from "./subscribe";
 import { payment } from "./payment";
 import { userCoupon } from "./user-coupon";
 import { user } from "./auth";
+import { chats, messages, messageGenerations, messageAttachments } from "./chat";
+import { files } from "./file";
 
 export const orderRelations = relations(order, ({ one, many }) => ({
 	subscribe: one(subscribe, {
@@ -33,5 +35,40 @@ export const userCouponRelations = relations(userCoupon, ({ one, many }) => ({
 	user: one(user, {
 		fields: [userCoupon.userId],
 		references: [user.id],
+	}),
+}));
+
+// Chat relations
+export const chatsRelations = relations(chats, ({ many }) => ({
+	messages: many(messages),
+}));
+
+export const messagesRelations = relations(messages, ({ one, many }) => ({
+	chat: one(chats, {
+		fields: [messages.chatId],
+		references: [chats.id],
+	}),
+	generation: one(messageGenerations, {
+		fields: [messages.generationId],
+		references: [messageGenerations.id],
+	}),
+	attachments: many(messageAttachments),
+}));
+
+export const messageGenerationsRelations = relations(messageGenerations, ({ one }) => ({
+	message: one(messages, {
+		fields: [messageGenerations.id],
+		references: [messages.generationId],
+	}),
+}));
+
+export const messageAttachmentsRelations = relations(messageAttachments, ({ one }) => ({
+	message: one(messages, {
+		fields: [messageAttachments.messageId],
+		references: [messages.id],
+	}),
+	file: one(files, {
+		fields: [messageAttachments.fileId],
+		references: [files.id],
 	}),
 }));
