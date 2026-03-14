@@ -20,6 +20,7 @@ export const settings = mysqlTable("settings", {
 	theme: varchar("theme", { length: 10, enum: theme }).default("system"),
 	themeColor: varchar("theme_color", { length: 10, enum: themeColor }).default("default"),
 	language: varchar("language", { length: 10 }).default("system"),
+	lastSelectedChatId: varchar("last_selected_chat_id", { length: 255 }),
 	createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
 	updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });

@@ -1,6 +1,5 @@
 import { useAuth } from "@/app/hooks/useAuth";
-import { useAiService } from "@/app/hooks/useService";
-import { useChatService } from "@/app/hooks/useService";
+import { useAiService, useChatService, useSettingsService } from "@/app/hooks/useService";
 import { useUIStore } from "@/app/stores";
 import type { AspectRatio } from "@/server/ai/types/api";
 import type { chatService } from "@/server/service/chat";
@@ -30,6 +29,7 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 	const { openLoginModal } = useUIStore();
 	const chatService = useChatService();
 	const aiService = useAiService();
+	const settingsService = useSettingsService();
 	const [currentChatId, setCurrentChatId] = useState<string | null>(initialChatId || null);
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [isChatIdValidated, setIsChatIdValidated] = useState(false);
@@ -39,6 +39,9 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 
 	// Get available providers and models
 	const { data: providers } = aiService.getEnabledAiProvidersWithModels.swr("ai-providers-with-models");
+
+	// Get user settings to load last selected chat ID
+	const { data: userSettings } = settingsService.getSettings.swr(isLogin ? "user-settings" : null);
 
 	// Get first available provider and model as fallback
 	const getDefaultProviderAndModel = useCallback((): { provider: string | undefined; model: string | undefined } => {
@@ -87,6 +90,20 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 			setLastInitialChatId(initialChatId);
 		}
 	}, [initialChatId, lastInitialChatId]);
+
+	// Load last selected chat from settings if no chatId is provided
+	useEffect(() => {
+		// Only load from settings if:
+		// 1. No chatId is provided in URL
+		// 2. User is logged in
+		// 3. User settings are available
+		// 4. Last selected chat ID exists
+		// 5. Initial load is complete
+		if (!initialChatId && isLogin && userSettings?.lastSelectedChatId && isInitialLoadComplete) {
+			setCurrentChatId(userSettings.lastSelectedChatId);
+			setIsChatIdValidated(true);
+		}
+	}, [initialChatId, isLogin, userSettings, isInitialLoadComplete]);
 
 	// Fetch chats using chatService.getChats only if user is logged in
 	const {
@@ -194,6 +211,15 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 				setCurrentChatId(result.id);
 				setIsChatIdValidated(true);
 
+				// Store selected chatId in settings
+				if (isLogin) {
+					try {
+						await settingsService.updateSettings({ lastSelectedChatId: result.id });
+					} catch (error) {
+						console.error("Error saving last selected chat ID:", error);
+					}
+				}
+
 				return result.id;
 			}
 		} catch (error) {
@@ -201,7 +227,7 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 			throw error; // Re-throw to let caller handle
 		}
 		return null;
-	}, [createChatTrigger, chatsMutate, selectedProvider, selectedModel, getDefaultProviderAndModel, t, isLogin, openLoginModal]);
+	}, [createChatTrigger, chatsMutate, selectedProvider, selectedModel, getDefaultProviderAndModel, t, isLogin, openLoginModal, settingsService]);
 	const deleteChat = useCallback(
 		async (chatId: string) => {
 			try {
@@ -313,17 +339,26 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 					});
 
 					if (!result?.id) {
-						throw new Error(t("chat.error.createNewChat"));
+					throw new Error(t("chat.error.createNewChat"));
+				}
+
+				// Revalidate chats list first to ensure the new chat appears in the list
+				await chatsMutate();
+
+				// Then set the new chat as current and mark as validated
+				setCurrentChatId(result.id);
+				setIsChatIdValidated(true);
+
+				// Store selected chatId in settings
+				if (isLogin) {
+					try {
+						await settingsService.updateSettings({ lastSelectedChatId: result.id });
+					} catch (error) {
+						console.error("Error saving last selected chat ID:", error);
 					}
+				}
 
-					// Revalidate chats list first to ensure the new chat appears in the list
-					await chatsMutate();
-
-					// Then set the new chat as current and mark as validated
-					setCurrentChatId(result.id);
-					setIsChatIdValidated(true);
-
-					// Trigger image generation if messages were created
+				// Trigger image generation if messages were created
 					if (result.messages) {
 						const assistantMessage = result.messages.find((msg: any) => msg.role === "assistant");
 						if (assistantMessage?.generation?.id) {
@@ -511,7 +546,7 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 			// Return the chat ID to caller
 			return chatId;
 		},
-		[ 
+		[
 			currentChatId,
 			sendMessageTrigger,
 			currentChatMutate,
@@ -526,12 +561,23 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 			t,
 			isLogin,
 			openLoginModal,
+			settingsService,
 		],
 	);
-	const switchChat = useCallback((chatId: string) => {
+	const switchChat = useCallback(async (chatId: string) => {
+		// Update local state
 		setCurrentChatId(chatId);
 		setIsChatIdValidated(true); // Mark as validated since we're switching to an existing chat
-	}, []);
+
+		// Store selected chatId in settings
+		if (isLogin) {
+			try {
+				await settingsService.updateSettings({ lastSelectedChatId: chatId });
+			} catch (error) {
+				console.error("Error saving last selected chat ID:", error);
+			}
+		}
+	}, [isLogin, settingsService]);
 
 	const clearChat = useCallback(() => {
 		setCurrentChatId(null);
