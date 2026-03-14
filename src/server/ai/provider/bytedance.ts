@@ -58,6 +58,7 @@ const ByteDance: AiProvider = {
         size,
         response_format: "b64_json",
         sequential_image_generation: request.n && request.n > 1 ? "auto" : "disabled",
+        watermark: false,
       };
 
       // 设置图片数量（SeedDream 4.5 模型）

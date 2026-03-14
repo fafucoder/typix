@@ -27,6 +27,7 @@ export interface SubscribeWithModels {
 
 export interface CurrentSubscription {
 	id: string;
+	orderId: string;
 	name: string;
 	startDate: string;
 	endDate: string;
@@ -195,6 +196,7 @@ getCurrentSubscription: async (userId: string): Promise<{ success: boolean; data
 
 			const currentSubscription: CurrentSubscription = {
 				id: subscribeData.id,
+				orderId: orderData.id,
 				name: subscribeData.name,
 				startDate: orderData.createdAt.toISOString(),
 				endDate: orderData.expiresAt ? orderData.expiresAt.toISOString() : new Date(Date.now() + subscribeData.duration * 24 * 60 * 60 * 1000).toISOString(),

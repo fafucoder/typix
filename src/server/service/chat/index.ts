@@ -13,6 +13,7 @@ import { aiService } from "../ai";
 import { type RequestContext, getContext } from "../context";
 import { getFileData, getFileUrl, saveFiles } from "../file/storage";
 import { fetchUrlToDataURI } from "../../lib/util";
+import { usageService } from "../usage";
 
 export const CreateChatSchema = createInsertSchema(chats)
 	.pick({
@@ -538,6 +539,19 @@ const executeGeneration = async (params: GenerationParams, ctx: RequestContext) 
 							updatedAt: now,
 						})
 						.where(eq(messageGenerations.id, generationId));
+
+					// Record usage statistics for video
+					try {
+						const activeOrder = await usageService.getUserActiveOrder(userId);
+						if (activeOrder) {
+							await usageService.recordUsage(userId, activeOrder.id, dbModel.id, 1);
+							console.log(`[ChatService] Recorded video usage for user ${userId}, order ${activeOrder.id}, model ${dbModel.id}`);
+						} else {
+							console.warn(`[ChatService] No active order found for user ${userId}, skipping usage recording`);
+						}
+					} catch (usageError) {
+						console.error("[ChatService] Error recording video usage:", usageError);
+					}
 				} catch (error) {
 					console.error("Error saving video file:", error);
 					await db
@@ -591,6 +605,19 @@ const executeGeneration = async (params: GenerationParams, ctx: RequestContext) 
 				updatedAt: now,
 			})
 			.where(eq(messageGenerations.id, generationId));
+
+			// Record usage statistics
+			try {
+				const activeOrder = await usageService.getUserActiveOrder(userId);
+				if (activeOrder) {
+					await usageService.recordUsage(userId, activeOrder.id, dbModel.id, imageCount || 1);
+					console.log(`[ChatService] Recorded usage for user ${userId}, order ${activeOrder.id}, model ${dbModel.id}`);
+				} else {
+					console.warn(`[ChatService] No active order found for user ${userId}, skipping usage recording`);
+				}
+			} catch (usageError) {
+				console.error("[ChatService] Error recording usage:", usageError);
+			}
 		}
 	} catch (error) {
 		console.error("Error generating content:", error);

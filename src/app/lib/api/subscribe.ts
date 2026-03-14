@@ -38,6 +38,7 @@ export interface ApiResponse<T> {
 
 export interface CurrentSubscription {
 	id: string;
+	orderId: string;
 	name: string;
 	startDate: string;
 	endDate: string;

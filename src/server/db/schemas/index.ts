@@ -8,4 +8,5 @@ export * from "./order";
 export * from "./payment";
 export * from "./coupon";
 export * from "./user-coupon";
+export * from "./usage";
 export * from "./relations";

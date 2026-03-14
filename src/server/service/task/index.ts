@@ -5,6 +5,7 @@ import { aiService } from "../ai";
 import { getProviderById } from "@/server/ai/provider";
 import { fetchUrlToDataURI } from "../../lib/util";
 import { saveFiles } from "../file/storage";
+import { usageService } from "../usage";
 
 // Task processor for video generation
 class TaskService {
@@ -223,6 +224,19 @@ class TaskService {
 							updatedAt: new Date(),
 						})
 						.where(eq(messageGenerations.id, task.id));
+
+					// Record usage statistics for async video
+					try {
+						const activeOrder = await usageService.getUserActiveOrder(task.userId);
+						if (activeOrder) {
+							await usageService.recordUsage(task.userId, activeOrder.id, dbModel.id, 1);
+							console.log(`[TaskService] Recorded video usage for user ${task.userId}, order ${activeOrder.id}, model ${dbModel.id}`);
+						} else {
+							console.warn(`[TaskService] No active order found for user ${task.userId}, skipping usage recording`);
+						}
+					} catch (usageError) {
+						console.error("[TaskService] Error recording video usage:", usageError);
+					}
 				} catch (error) {
 					console.error("Error saving video file:", error);
 					await db
