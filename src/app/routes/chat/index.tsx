@@ -44,7 +44,9 @@ function ChatPageContent() {
 	const [selectedModel, setSelectedModel] = useState<string | undefined>();
 
 	// Get available providers for auto-selection
-	const { data: providers } = aiService.getEnabledAiProvidersWithModels.swr("ai-providers-with-models");
+	const { data: providers } = aiService.getEnabledAiProvidersWithModels.swr("ai-providers-with-models-text2image", {
+		modelType: "text2image",
+	});
 
 	const {
 		chats,

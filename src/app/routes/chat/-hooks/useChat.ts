@@ -38,7 +38,9 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 	const [lastInitialChatId, setLastInitialChatId] = useState<string | undefined>(initialChatId);
 
 	// Get available providers and models
-	const { data: providers } = aiService.getEnabledAiProvidersWithModels.swr("ai-providers-with-models");
+	const { data: providers } = aiService.getEnabledAiProvidersWithModels.swr(`ai-providers-with-models-${chatType || 'text2image'}`, {
+		modelType: chatType || "text2image",
+	});
 
 	// Get user settings to load last selected chat ID
 	const { data: userSettings } = settingsService.getSettings.swr(isLogin ? "user-settings" : null);
