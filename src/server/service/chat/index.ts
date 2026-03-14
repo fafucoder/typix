@@ -219,9 +219,8 @@ const updateChat = async (req: UpdateChat, ctx: RequestContext) => {
 
 	// Validate provider and model if provided
 	if (req.provider && req.model) {
-		const providerInstance = getProviderById(req.provider);
-		const modelExists = providerInstance.models.some((m) => m.id === req.model);
-		if (!modelExists) {
+		const { dbModel } = await aiService.getAiProviderAndModelById({ providerId: req.provider, modelId: req.model }, ctx);
+		if (!dbModel) {
 			throw new ServiceException("invalid_parameter", "Model not found for the specified provider");
 		}
 	}
