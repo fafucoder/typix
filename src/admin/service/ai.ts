@@ -3,7 +3,6 @@ import { eq, and, desc } from "drizzle-orm";
 import { getContext } from "@/admin/service/context";
 import { randomBytes } from "node:crypto";
 import type { MySql2Database } from "drizzle-orm/mysql2";
-import { encrypt, decrypt, isEncrypted } from "@/admin/lib/crypto";
 
 const generateId = (): string => {
 	return randomBytes(16).toString("hex");
@@ -79,19 +78,8 @@ interface ModelResult {
 	updatedAt: Date;
 }
 
-// Helper function to decrypt provider's secretKey
+// Helper function to return provider's secretKey as-is (no encryption)
 const decryptProviderSecretKey = (provider: any): ProviderResult => {
-	if (provider.secretKey && isEncrypted(provider.secretKey)) {
-		try {
-			return {
-				...provider,
-				secretKey: decrypt(provider.secretKey),
-			};
-		} catch (error) {
-			console.error("Failed to decrypt secretKey for provider:", provider.id);
-			return provider;
-		}
-	}
 	return provider;
 };
 
@@ -165,15 +153,12 @@ const createProvider = async (req: CreateProviderRequest): Promise<{ success: bo
 		}
 		
 		const id = generateId();
-		// Encrypt secretKey if provided
-		const encryptedSecretKey = req.secretKey ? encrypt(req.secretKey) : null;
-		
 		await db.insert(aiProviders).values({
 			id,
 			providerId: req.providerId,
 			name: req.name,
 			endpoints: req.endpoints || null,
-			secretKey: encryptedSecretKey,
+			secretKey: req.secretKey || null,
 			enabled: req.enabled ? 1 : 0,
 			settings: req.settings || null,
 			createdAt: new Date(),
@@ -196,9 +181,9 @@ const updateProvider = async (id: string, req: UpdateProviderRequest): Promise<{
 		
 		if (req.name !== undefined) updateData.name = req.name;
 		if (req.endpoints !== undefined) updateData.endpoints = req.endpoints || null;
-		// Encrypt secretKey if provided
+		// Store secretKey as-is (no encryption)
 		if (req.secretKey !== undefined) {
-			updateData.secretKey = req.secretKey ? encrypt(req.secretKey) : null;
+			updateData.secretKey = req.secretKey || null;
 		}
 		if (req.enabled !== undefined) updateData.enabled = req.enabled ? 1 : 0;
 		if (req.settings !== undefined) updateData.settings = req.settings || null;
