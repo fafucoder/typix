@@ -263,7 +263,7 @@ const ByteDance: AiProvider = {
             videoUrl: content.video_url as string,
             status: "completed",
             generationTime: data.updated_at && data.created_at 
-              ? Number(data.updated_at) - Number(data.created_at)
+              ? (Number(data.updated_at) - Number(data.created_at)) * 1000
               : undefined,
           };
         }
