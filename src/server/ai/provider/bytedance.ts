@@ -163,15 +163,6 @@ const ByteDance: AiProvider = {
     const model = request.modelId;
 
     try {
-      console.log('[ByteDance Video] Starting video generation:', {
-        model,
-        prompt: request.prompt,
-        aspectRatio: request.aspectRatio,
-        duration: request.duration,
-        baseURL: baseURL || defaultBaseURL,
-        hasApiKey: !!apiKey,
-      });
-
       // Prepare request body for video generation
       const requestBody: Record<string, unknown> = {
         model,
@@ -187,8 +178,6 @@ const ByteDance: AiProvider = {
         watermark: false,
       };
 
-      console.log('[ByteDance Video] Request body:', JSON.stringify(requestBody, null, 2));
-
       // Create video generation task
       const response = await fetch(`${baseURL || defaultBaseURL}/contents/generations/tasks`, {
         method: "POST",
@@ -199,136 +188,113 @@ const ByteDance: AiProvider = {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('[ByteDance Video] API response status:', response.status);
-      console.log('[ByteDance Video] API response headers:', Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})) as Record<string, unknown>;
-        console.log('[ByteDance Video] API error data:', errorData);
         
         if (response.status === 401 || response.status === 404) {
-          console.error('[ByteDance Video] Authentication error or endpoint not found');
           return {
             errorReason: "CONFIG_ERROR",
           };
         }
         if (response.status === 429) {
-          console.error('[ByteDance Video] Rate limit exceeded');
           return {
             errorReason: "TOO_MANY_REQUESTS",
           };
         }
         if (response.status === 400) {
-          console.error('[ByteDance Video] Bad request:', errorData);
           return {
             errorReason: "API_ERROR",
           };
         }
         const errorMessage = (errorData.message as string) || `HTTP error! status: ${response.status}`;
-        console.error('[ByteDance Video] Unexpected error:', errorMessage);
         throw new Error(errorMessage);
       }
 
       const data = await response.json() as Record<string, unknown>;
-      console.log('[ByteDance Video] API response data:', data);
 
       // Check if task was created successfully
       if (data.id) {
         const taskId = data.id as string;
-        console.log('[ByteDance Video] Task created successfully:', taskId);
         
-        // Poll for task completion
-        const videoUrl = await pollVideoTask(taskId, apiKey, baseURL || defaultBaseURL);
-        
-        if (videoUrl) {
-          console.log('[ByteDance Video] Video generation completed:', videoUrl);
-          return {
-            videoUrl,
-            status: "completed",
-          };
-        }
-        
-        console.error('[ByteDance Video] Video generation failed without URL');
+        // Return task ID for backend polling
         return {
-          errorReason: "UNKNOWN",
+          taskId,
+          status: "generating",
         };
       }
 
-      console.error('[ByteDance Video] No task ID in response:', data);
       return {
         errorReason: "UNKNOWN",
       };
     } catch (error) {
-      console.error('[ByteDance Video] Video generation error:', error);
       return {
         errorReason: "UNKNOWN",
       };
     }
   },
-};
 
-async function pollVideoTask(taskId: string, apiKey: string, baseURL: string): Promise<string | null> {
-  const maxAttempts = 120; // 30 minutes with 15 second intervals
-  const interval = 15000; // 15 seconds
+  // Poll video task status
+  async pollVideoTask(taskId: string, apiKey: string, baseURL: string): Promise<import("../types/api").TypixVideoApiResponse | null> {
+    const maxAttempts = 1200; // 30 minutes with 15 second intervals
+    const interval = 15000; // 15 seconds
 
-  console.log('[ByteDance Video] Starting to poll task:', taskId);
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const response = await fetch(`${baseURL}/contents/generations/tasks/${taskId}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        });
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      console.log(`[ByteDance Video] Polling task ${taskId}, attempt ${attempt + 1}/${maxAttempts}`);
-      
-      const response = await fetch(`${baseURL}/contents/generations/tasks/${taskId}`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-        },
-      });
+        if (!response.ok) {
+          // Continue polling
+          await new Promise(resolve => setTimeout(resolve, interval));
+          continue;
+        }
 
-      console.log(`[ByteDance Video] Poll response status: ${response.status}`);
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => 'No error text');
-        console.error(`[ByteDance Video] Failed to poll task status: ${response.status}, ${errorText}`);
+        const data = await response.json() as Record<string, unknown>;
+        
+        const status = data.status as string;
+        const content = data.content as Record<string, unknown> | undefined;
+        
+        if (status === "succeeded" && content && content.video_url) {
+          return {
+            videoUrl: content.video_url as string,
+            status: "completed",
+            generationTime: data.updated_at && data.created_at 
+              ? Number(data.updated_at) - Number(data.created_at)
+              : undefined,
+          };
+        }
+        
+        if (status === "failed") {
+          return {
+            errorReason: "API_ERROR",
+            status: "failed",
+          };
+        }
+        
+        // Continue polling for pending, running, or queued status
+        if (status === "pending" || status === "running" || status === "queued") {
+          await new Promise(resolve => setTimeout(resolve, interval));
+          continue;
+        }
+        
+        // Unknown status
+        return null;
+      } catch (error) {
         // Continue polling
         await new Promise(resolve => setTimeout(resolve, interval));
         continue;
       }
-
-      const data = await response.json() as Record<string, unknown>;
-      console.log(`[ByteDance Video] Poll response data:`, data);
-      
-      const status = data.status as string;
-      const content = data.content as Record<string, unknown> | undefined;
-      
-      if (status === "succeeded" && content && content.video_url) {
-        console.log(`[ByteDance Video] Task ${taskId} succeeded, video URL:`, content.video_url);
-        return content.video_url as string;
-      }
-      
-      if (status === "failed") {
-        console.error(`[ByteDance Video] Task ${taskId} failed:`, data.message);
-        return null;
-      }
-      
-      // Continue polling for pending, running, or queued status
-			if (status === "pending" || status === "running" || status === "queued") {
-				console.log(`[ByteDance Video] Task ${taskId} status: ${status}, waiting ${interval}ms`);
-				await new Promise(resolve => setTimeout(resolve, interval));
-				continue;
-			}
-      
-      // Unknown status
-      console.error(`[ByteDance Video] Task ${taskId} unknown status:`, status);
-      return null;
-    } catch (error) {
-      console.error(`[ByteDance Video] Error polling task ${taskId}:`, error);
-      // Continue polling
-      await new Promise(resolve => setTimeout(resolve, interval));
     }
-  }
 
-  console.error(`[ByteDance Video] Task ${taskId} timed out after ${maxAttempts} attempts`);
-  return null;
-}
+    return {
+      errorReason: "TIMEOUT",
+      status: "failed",
+    };
+  },
+};
 
 export default ByteDance;

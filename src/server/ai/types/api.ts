@@ -54,5 +54,7 @@ export type TypixVideoApiResponse = {
 	errorReason?: ErrorReason; // Optional error reason if generation failed
 	videoUrl?: string; // URL to the generated video
 	videoBase64?: string; // Base64 encoded video data
+	taskId?: string; // AI provider's task ID for polling
 	status?: "pending" | "generating" | "completed" | "failed"; // Generation status
+	generationTime?: number; // Time taken to generate the video in milliseconds
 };

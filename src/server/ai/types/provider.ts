@@ -27,6 +27,7 @@ export interface AiProvider {
 	parseSettings<T>(settings: ApiProviderSettings): T;
 	generate: (request: TypixGenerateRequest, settings: ApiProviderSettings) => Promise<TypixChatApiResponse>;
 	generateVideo?: (request: TypixVideoGenerateRequest, settings: ApiProviderSettings) => Promise<TypixVideoApiResponse>;
+	pollVideoTask?: (taskId: string, apiKey: string, baseURL: string) => Promise<TypixVideoApiResponse | null>;
 }
 
 // Generic type-safe settings accessor

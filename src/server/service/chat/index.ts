@@ -512,7 +512,17 @@ const executeGeneration = async (params: GenerationParams, ctx: RequestContext) 
 				return;
 			}
 
-			if (videoResult.videoUrl) {
+			if (videoResult.taskId) {
+				// Store task ID and set status to generating
+				await db
+					.update(messageGenerations)
+					.set({
+						taskId: videoResult.taskId,
+						status: "generating",
+						updatedAt: now,
+					})
+					.where(eq(messageGenerations.id, generationId));
+			} else if (videoResult.videoUrl) {
 				// Download video from URL and save to files table
 				try {
 					const videoData = await fetchUrlToDataURI(videoResult.videoUrl, "mp4");

@@ -40,6 +40,7 @@ export const messageGenerations = mysqlTable("message_generations", {
 	parameters: text("parameters"), // parameters as JSON
 	provider: text("provider").notNull(), // AI provider used for generation
 	model: text("model").notNull(), // AI model used for generation
+	taskId: varchar("task_id", { length: 255 }), // AI provider's task ID for video generation
 	status: varchar("status", { length: 20, enum: ["pending", "generating", "completed", "failed"] }).default("pending"),
 	fileIds: text("file_ids"), // Array of file IDs if applicable
 	errorReason: varchar("error_reason", { length: 30, enum: errorReason }), // Reason for failure if status is "failed"

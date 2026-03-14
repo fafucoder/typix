@@ -1,8 +1,21 @@
 import "dotenv/config";
 import indexHtml from "../../index.html?raw";
+import { Hono } from "hono";
 import app from "./api";
+import { taskScheduler } from "./service/task/scheduler";
 
-app.get("/*", (c) =>
+// Start task scheduler for video generation
+taskScheduler.start();
+
+// Create a new app instance for combined routing
+const htmlApp = new Hono();
+
+// Mount the API app at root path
+// The API app already has /api basePath
+htmlApp.route("/", app);
+
+// Add HTML route for all other requests
+htmlApp.get("/*", (c) =>
 	c.html(
 		indexHtml.replace(
 			"</head>",
@@ -21,4 +34,9 @@ app.get("/*", (c) =>
 	),
 );
 
-export default app;
+// Export the combined app
+export default htmlApp;
+
+
+
+

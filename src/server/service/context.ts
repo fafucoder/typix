@@ -14,6 +14,8 @@ interface ServiceContext {
 
 let serviceContext: ServiceContext | null = null;
 
+export { serviceContext };
+
 export const localUserId = "GUEST";
 
 export function initContext(context: ServiceContext): ServiceContext {
