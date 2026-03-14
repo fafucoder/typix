@@ -18,8 +18,9 @@ const app = new Hono<Env>()
 	.use(authMiddleware)
 	.post("/getChats", async (c) => {
 		const user = c.var.user!;
+		const req = await c.req.json();
 
-		const userChats = await chatService.getChats({ userId: user.id });
+		const userChats = await chatService.getChats(req, { userId: user.id, executionCtx: c.executionCtx });
 		return c.json(ok(userChats));
 	})
 	.post("/createChat", zValidator("json", CreateChatSchema), async (c) => {

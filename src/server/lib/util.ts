@@ -43,7 +43,7 @@ export async function readableStreamToDataURI(stream: ReadableStream<Uint8Array>
 	return base64ToDataURI(base64, fmt);
 }
 
-export async function fetchUrlToDataURI(url: string) {
+export async function fetchUrlToDataURI(url: string, fmt = "png") {
 	const resp = await fetch(url);
 	if (!resp.ok) {
 		throw new Error(`Failed to fetch URL: ${url}, status: ${resp.status}`);
@@ -54,5 +54,5 @@ export async function fetchUrlToDataURI(url: string) {
 	const uint8Array = new Uint8Array(arrayBuffer);
 	const binaryString = Array.from(uint8Array, (byte) => String.fromCharCode(byte)).join("");
 	const base64 = btoa(binaryString);
-	return base64ToDataURI(base64);
+	return base64ToDataURI(base64, fmt);
 }

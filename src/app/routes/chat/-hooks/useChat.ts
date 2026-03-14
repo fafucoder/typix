@@ -23,7 +23,7 @@ const guestUser: User = {
 	avatar: undefined,
 };
 
-export const useChat = (initialChatId?: string, selectedProvider?: string, selectedModel?: string) => {
+export const useChat = (initialChatId?: string, selectedProvider?: string, selectedModel?: string, chatType?: "text2image" | "text2video") => {
 	const { isLoading: authLoading, user, isLogin } = useAuth();
 	const { t } = useTranslation();
 	const { openLoginModal } = useUIStore();
@@ -91,6 +91,25 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 		}
 	}, [initialChatId, lastInitialChatId]);
 
+	// Store initialChatId in settings when it's provided via URL
+	useEffect(() => {
+		// Only store if:
+		// 1. initialChatId is provided (via URL)
+		// 2. User is logged in
+		// 3. initialChatId has changed
+		if (initialChatId && isLogin && initialChatId !== lastInitialChatId) {
+			try {
+				if (chatType === 'text2video') {
+					settingsService.updateSettings({ videoLastSelectedChatId: initialChatId });
+				} else {
+					settingsService.updateSettings({ lastSelectedChatId: initialChatId });
+				}
+			} catch (error) {
+				console.error("Error saving last selected chat ID from URL:", error);
+			}
+		}
+	}, [initialChatId, lastInitialChatId, isLogin, chatType, settingsService]);
+
 	// Load last selected chat from settings if no chatId is provided
 	useEffect(() => {
 		// Only load from settings if:
@@ -99,11 +118,15 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 		// 3. User settings are available
 		// 4. Last selected chat ID exists
 		// 5. Initial load is complete
-		if (!initialChatId && isLogin && userSettings?.lastSelectedChatId && isInitialLoadComplete) {
-			setCurrentChatId(userSettings.lastSelectedChatId);
-			setIsChatIdValidated(true);
+		if (!initialChatId && isLogin && userSettings && isInitialLoadComplete) {
+			// Use videoLastSelectedChatId for video chats, otherwise use lastSelectedChatId
+			const lastSelectedChatId = chatType === 'text2video' ? userSettings.videoLastSelectedChatId : userSettings.lastSelectedChatId;
+			if (lastSelectedChatId) {
+				setCurrentChatId(lastSelectedChatId);
+				setIsChatIdValidated(true);
+			}
 		}
-	}, [initialChatId, isLogin, userSettings, isInitialLoadComplete]);
+	}, [initialChatId, isLogin, userSettings, isInitialLoadComplete, chatType]);
 
 	// Fetch chats using chatService.getChats only if user is logged in
 	const {
@@ -111,7 +134,9 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 		error: chatsError,
 		isLoading: isLoadingChats,
 		mutate: chatsMutate,
-	} = chatService.getChats.swr(isLogin ? "chats" : null); // Track when initial auth and data loading is complete
+	} = chatService.getChats.swr(isLogin ? `chats-${chatType || 'text2image'}` : null, {
+		type: chatType || 'text2image',
+	}); // Track when initial auth and data loading is complete
 	useEffect(() => {
 		if (!authLoading && !isLoadingChats && !isInitialLoadComplete) {
 			setIsInitialLoadComplete(true);
@@ -200,6 +225,7 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 				title: t("chat.newChatTitle"),
 				provider,
 				model,
+				type: chatType || 'text2image',
 				imageCount: 1, // Default image count for new chat
 			});
 
@@ -211,10 +237,14 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 				setCurrentChatId(result.id);
 				setIsChatIdValidated(true);
 
-				// Store selected chatId in settings
+				// Store selected chatId in settings based on chatType
 				if (isLogin) {
 					try {
-						await settingsService.updateSettings({ lastSelectedChatId: result.id });
+						if (chatType === 'text2video') {
+							await settingsService.updateSettings({ videoLastSelectedChatId: result.id });
+						} else {
+							await settingsService.updateSettings({ lastSelectedChatId: result.id });
+						}
 					} catch (error) {
 						console.error("Error saving last selected chat ID:", error);
 					}
@@ -227,7 +257,7 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 			throw error; // Re-throw to let caller handle
 		}
 		return null;
-	}, [createChatTrigger, chatsMutate, selectedProvider, selectedModel, getDefaultProviderAndModel, t, isLogin, openLoginModal, settingsService]);
+	}, [createChatTrigger, chatsMutate, selectedProvider, selectedModel, getDefaultProviderAndModel, t, isLogin, openLoginModal, settingsService, chatType]);
 	const deleteChat = useCallback(
 		async (chatId: string) => {
 			try {
@@ -328,15 +358,16 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 					}
 
 					const result = await createChatTrigger({
-						title: t("chat.newChatTitle"),
-						provider,
-						model,
-						content,
-						attachments,
-						images, // Keep for backward compatibility
-						imageCount: imageCount || 1, // Pass the image count
-						aspectRatio, // Pass the aspect ratio
-					});
+					title: t("chat.newChatTitle"),
+					provider,
+					model,
+					type: chatType || 'text2image',
+					content,
+					attachments,
+					images, // Keep for backward compatibility
+					imageCount: imageCount || 1, // Pass the image count
+					aspectRatio, // Pass the aspect ratio
+				});
 
 					if (!result?.id) {
 					throw new Error(t("chat.error.createNewChat"));
@@ -349,10 +380,14 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 				setCurrentChatId(result.id);
 				setIsChatIdValidated(true);
 
-				// Store selected chatId in settings
+				// Store selected chatId in settings based on chatType
 				if (isLogin) {
 					try {
-						await settingsService.updateSettings({ lastSelectedChatId: result.id });
+						if (chatType === 'text2video') {
+							await settingsService.updateSettings({ videoLastSelectedChatId: result.id });
+						} else {
+							await settingsService.updateSettings({ lastSelectedChatId: result.id });
+						}
 					} catch (error) {
 						console.error("Error saving last selected chat ID:", error);
 					}
@@ -562,6 +597,7 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 			isLogin,
 			openLoginModal,
 			settingsService,
+			chatType,
 		],
 	);
 	const switchChat = useCallback(async (chatId: string) => {
@@ -569,15 +605,19 @@ export const useChat = (initialChatId?: string, selectedProvider?: string, selec
 		setCurrentChatId(chatId);
 		setIsChatIdValidated(true); // Mark as validated since we're switching to an existing chat
 
-		// Store selected chatId in settings
+		// Store selected chatId in settings based on chatType
 		if (isLogin) {
 			try {
-				await settingsService.updateSettings({ lastSelectedChatId: chatId });
+				if (chatType === 'text2video') {
+					await settingsService.updateSettings({ videoLastSelectedChatId: chatId });
+				} else {
+					await settingsService.updateSettings({ lastSelectedChatId: chatId });
+				}
 			} catch (error) {
 				console.error("Error saving last selected chat ID:", error);
 			}
 		}
-	}, [isLogin, settingsService]);
+	}, [isLogin, settingsService, chatType]);
 
 	const clearChat = useCallback(() => {
 		setCurrentChatId(null);

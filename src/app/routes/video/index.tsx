@@ -62,7 +62,7 @@ function VideoPageContent() {
 		updateMessage,
 		deleteMessage,
 		regenerateMessage,
-	} = useChat(chatId, selectedProvider, selectedModel);
+	} = useChat(chatId, selectedProvider, selectedModel, "text2video");
 
 	// Auto-select first available model for new chats only
 	useEffect(() => {

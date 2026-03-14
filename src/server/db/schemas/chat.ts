@@ -11,6 +11,7 @@ export const chats = mysqlTable("chats", {
 	userId: varchar("user_id", { length: 255 }).notNull(),
 	provider: text("provider").notNull(), // Current AI provider for the chat
 	model: text("model").notNull(), // Current AI model for the chat
+	type: varchar("type", { length: 10, enum: ["text2image", "text2video"] }).default("text2image").notNull(), // Chat type
 	deleted: int("deleted").default(0), // 0=false, 1=true
 	createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
 	updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
@@ -58,7 +59,7 @@ export const messages = mysqlTable("messages", {
 		.notNull(),
 	content: text("content").notNull(),
 	role: varchar("role", { length: 20, enum: ["user", "assistant"] }).notNull(),
-	type: varchar("type", { length: 10, enum: ["text", "image"] })
+	type: varchar("type", { length: 10, enum: ["text", "image", "video"] })
 		.default("text")
 		.notNull(),
 	// For image messages, this will reference the message generations table

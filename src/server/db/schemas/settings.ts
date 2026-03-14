@@ -21,6 +21,7 @@ export const settings = mysqlTable("settings", {
 	themeColor: varchar("theme_color", { length: 10, enum: themeColor }).default("default"),
 	language: varchar("language", { length: 10 }).default("system"),
 	lastSelectedChatId: varchar("last_selected_chat_id", { length: 255 }),
+	videoLastSelectedChatId: varchar("video_last_selected_chat_id", { length: 255 }),
 	createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
 	updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });

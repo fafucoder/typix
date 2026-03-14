@@ -8,7 +8,7 @@ import { type RequestContext, getContext } from "../context";
 export const UpdateSettingsSchema = createInsertSchema(settings).omit(createSchemaOmits);
 export type UpdateSettings = z.infer<typeof UpdateSettingsSchema>;
 const updateSettings = async (req: UpdateSettings, ctx: RequestContext) => {
-	const { theme, themeColor, language, lastSelectedChatId } = req;
+	const { theme, themeColor, language, lastSelectedChatId, videoLastSelectedChatId } = req;
 	const { db } = getContext();
 	const { userId } = ctx;
 
@@ -26,6 +26,7 @@ const updateSettings = async (req: UpdateSettings, ctx: RequestContext) => {
 				...(themeColor && { themeColor }),
 				...(language && { language }),
 				...(lastSelectedChatId && { lastSelectedChatId }),
+				...(videoLastSelectedChatId && { videoLastSelectedChatId }),
 			})
 			.where(eq(settings.userId, userId));
 	} else {
@@ -36,6 +37,7 @@ const updateSettings = async (req: UpdateSettings, ctx: RequestContext) => {
 			themeColor: themeColor || "default",
 			language: language || "system",
 			lastSelectedChatId,
+			videoLastSelectedChatId,
 		});
 	}
 };

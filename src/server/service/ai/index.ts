@@ -252,6 +252,35 @@ const batchUpdateAiModelsEnabled = async (req: BatchUpdateAiModelsEnabled, _ctx:
 	await db.update(aiModels).set({ enabled: req.enabled }).where(inArray(aiModels.id, req.ids));
 };
 
+export const GetAiProviderAndModelByIdSchema = z.object({
+	providerId: z.string(),
+	modelId: z.string(),
+});
+export type GetAiProviderAndModelById = z.infer<typeof GetAiProviderAndModelByIdSchema>;
+
+const getAiProviderAndModelById = async (req: GetAiProviderAndModelById, _ctx: RequestContext) => {
+	const { db } = getContext();
+	
+	// Get provider from database
+	const dbProvider = await db.query.aiProviders.findFirst({
+		where: eq(aiProviders.providerId, req.providerId),
+	});
+	
+	if (!dbProvider) {
+		return { dbProvider: null, dbModel: null };
+	}
+	
+	// Get model from database
+	const dbModel = await db.query.aiModels.findFirst({
+		where: and(
+			eq(aiModels.providerId, dbProvider.id),
+			eq(aiModels.modelId, req.modelId),
+		),
+	});
+	
+	return { dbProvider, dbModel };
+};
+
 class AiService {
 	getAiProviders = getAiProviders;
 	getEnabledAiProvidersWithModels = getEnabledAiProvidersWithModels;
@@ -262,6 +291,7 @@ class AiService {
 	updateAiModel = updateAiModel;
 	deleteAiModel = deleteAiModel;
 	batchUpdateAiModelsEnabled = batchUpdateAiModelsEnabled;
+	getAiProviderAndModelById = getAiProviderAndModelById;
 }
 
 export const aiService = new AiService();

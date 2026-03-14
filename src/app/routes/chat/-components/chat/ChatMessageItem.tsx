@@ -65,7 +65,7 @@ export function ChatMessageItem({
 			}
 		}
 
-		// Add AI generated images
+		// Add AI generated images (exclude video messages)
 		if (msg.type === "image" && msg.generation?.resultUrls && msg.generation?.status === "completed") {
 			const urls = msg.generation!.resultUrls;
 			// Handle both string and array formats
@@ -80,6 +80,14 @@ export function ChatMessageItem({
 
 		return images;
 	});
+
+	// Get video URL for video messages
+	const videoUrl = message.type === "video" && message.generation?.resultUrls
+		? typeof message.generation.resultUrls === "string"
+			? message.generation.resultUrls
+			: (message.generation.resultUrls as string[])[0]
+		: undefined;
+	const isVideoSuccessful = message.type === "video" && message.generation?.status === "completed" && videoUrl;
 	// Find current image index
 	const currentImageUrls = message.generation?.resultUrls;
 	const currentImageUrl = currentImageUrls
@@ -238,7 +246,7 @@ export function ChatMessageItem({
 			</div>
 
 			{/* Message Content */}
-			<div className={cn("min-w-0", message.type === "image" && !message.content ? "" : "flex-1")}>
+			<div className={cn("min-w-0", (message.type === "image" || message.type === "video") && !message.content ? "" : "flex-1")}>
 				{/* Message Header - positioned above the message box */}
 				<div className={cn("mb-1 flex items-center gap-2 text-muted-foreground text-xs", isUser && "flex-row-reverse")}>
 					<span className="opacity-70">{formatTime(displayTime)}</span>
@@ -344,7 +352,7 @@ export function ChatMessageItem({
 												<div className="h-2 w-2 animate-bounce rounded-full bg-primary delay-150" />
 											</div>
 											<span className="text-muted-foreground text-xs">
-												{message.type === "image" ? t("chat.generating") : t("chat.thinking")}
+												{message.type === "image" || message.type === "video" ? t("chat.generating") : t("chat.thinking")}
 											</span>
 										</div>
 										<div className="space-y-2">
@@ -501,6 +509,50 @@ export function ChatMessageItem({
 										)}
 								</div>
 								)}
+							</div>
+						</div>
+					)}
+
+					{/* Display AI generated video */}
+					{message.type === "video" && videoUrl && (
+						<div className={cn("mt-2", isUser ? "flex justify-end" : "flex justify-start")}>
+							<div className="w-full max-w-2xl">
+								<div className="flex items-end gap-2 group">
+									<div className="relative">
+										{/* Message Actions for video */}
+										{isHovered && (
+											<MessageActions
+												messageId={message.id}
+												messageType={message.type}
+												content={message.content}
+												imageUrls={[videoUrl]}
+												isUser={isUser}
+												onDelete={onDelete}
+												className={cn(
+													"absolute top-1 z-10",
+													isUser ? "sm:-left-2 sm:-translate-x-full" : "sm:-right-2 sm:translate-x-full",
+													isUser ? "right-2 sm:right-auto" : "left-2 sm:left-auto",
+												)}
+											/>
+										)}
+										<video
+											src={videoUrl}
+											controls
+											className="h-auto w-full max-w-sm rounded-xl shadow-lg sm:max-w-md md:max-w-lg"
+											preload="metadata"
+										/>
+									</div>
+									{message.generation && message.generation.status === "completed" && (
+										<div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 rounded-lg border border-border/50 bg-background/80 p-1 shadow-lg backdrop-blur-sm text-xs">
+											{message.generation.generationTime && (
+												<div className="flex items-center gap-1">
+													<span>⏱</span>
+													<span>{(message.generation.generationTime / 1000).toFixed(1)}s</span>
+												</div>
+											)}
+										</div>
+									)}
+								</div>
 							</div>
 						</div>
 					)}

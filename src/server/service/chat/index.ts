@@ -5,19 +5,21 @@ import { chats, messageAttachments, messageGenerations, messages } from "@/serve
 import { createSchemaOmits } from "@/server/db/util";
 import { inBrowser, inCfWorker } from "@/server/lib/env";
 import { ServiceException } from "@/server/lib/exception";
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql, asc } from "drizzle-orm";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
 import z from "zod/v4";
 import { customAlphabet } from "nanoid/non-secure";
 import { aiService } from "../ai";
 import { type RequestContext, getContext } from "../context";
 import { getFileData, getFileUrl, saveFiles } from "../file/storage";
+import { fetchUrlToDataURI } from "../../lib/util";
 
 export const CreateChatSchema = createInsertSchema(chats)
 	.pick({
 		title: true,
 		provider: true,
 		model: true,
+		type: true,
 	})
 	.extend({
 		content: z.string().optional(),
@@ -61,6 +63,7 @@ const createChat = async (req: CreateChat, ctx: RequestContext) => {
 			title: req.title,
 			provider: req.provider,
 			model: req.model,
+			type: req.type,
 		});
 
 	const chat = await db.query.chats.findFirst({
@@ -90,12 +93,17 @@ const createChat = async (req: CreateChat, ctx: RequestContext) => {
 	return { id: chat!.id };
 };
 
-const getChats = async (ctx: RequestContext) => {
+const getChats = async (req: { type?: "text2image" | "text2video" }, ctx: RequestContext) => {
 	const { db } = getContext();
 	const { userId } = ctx;
 
+	// Get user chats filtered by type if provided
 	const userChats = await db.query.chats.findMany({
-		where: and(eq(chats.userId, userId), eq(chats.deleted, 0)),
+		where: and(
+			eq(chats.userId, userId),
+			eq(chats.deleted, 0),
+			req.type ? eq(chats.type, req.type) : undefined,
+		),
 		orderBy: [desc(chats.createdAt)],
 	});
 
@@ -329,7 +337,7 @@ export const CreateMessageSchema = createInsertSchema(messages)
 export type CreateMessage = z.infer<typeof CreateMessageSchema>;
 type CreateMessageResponse = Pick<NonNullable<Awaited<ReturnType<typeof getChatById>>>, "messages">;
 
-// Common image generation logic
+// Common generation logic
 interface GenerationParams {
 	generationId: string;
 	prompt: string;
@@ -340,10 +348,11 @@ interface GenerationParams {
 	userImages?: string[];
 	imageCount?: number; // Number of images to generate
 	aspectRatio?: string; // Aspect ratio for image generation
+	duration?: number; // Duration for video generation
 	messageId?: string; // For regeneration, exclude this message from reference search
 }
 
-const executeImageGeneration = async (params: GenerationParams, ctx: RequestContext) => {
+const executeGeneration = async (params: GenerationParams, ctx: RequestContext) => {
 	const { db } = getContext();
 	const {
 		generationId,
@@ -355,6 +364,7 @@ const executeImageGeneration = async (params: GenerationParams, ctx: RequestCont
 		userImages,
 		imageCount,
 		aspectRatio,
+		duration,
 		messageId,
 	} = params;
 
@@ -396,12 +406,17 @@ const executeImageGeneration = async (params: GenerationParams, ctx: RequestCont
 			settings.apiKey = dbProvider.secretKey;
 		}
 		
+		if (dbModel.type === "text2video" && dbModel.ability !== "t2v") {
+			dbModel.ability = "t2v";
+		}
+
 		// Debug log: Print configuration from database
 		console.log(`[AI DB Config] Provider: ${providerId}`);
 		console.log(`[AI DB Config] Endpoints: ${dbProvider.endpoints}`);
 		console.log(`[AI DB Config] SecretKey: ${dbProvider.secretKey ? '***' : 'Not set'}`);
 		console.log(`[AI DB Config] Final settings:`, settings);
 		
+
 		// Build model object that conforms to AiModel interface
 		const model: AiModel = {
 			id: dbModel.modelId,
@@ -467,44 +482,108 @@ const executeImageGeneration = async (params: GenerationParams, ctx: RequestCont
 		}
 
 		const now = new Date();
-		const result = await providerInstance.generate(
-			{
-				providerId,
-				modelId,
-				prompt,
-				images: referImages,
-				n: imageCount || 1, // Pass the image count to provider
-				aspectRatio: aspectRatio as any, // Pass the aspect ratio to provider
-				model: model,
-			},
-			settings,
-		);
-		if (result.errorReason) {
+		
+		// Determine which generation method to use based on model type
+		if (dbModel.type === "text2video") {
+			// Video generation
+			console.log(`[ChatService] Starting video generation for model ${modelId}`);
+			
+			const videoResult = await providerInstance.generateVideo(
+				{
+					providerId,
+					modelId,
+					prompt,
+					aspectRatio: aspectRatio as any,
+					duration: duration || 5,
+					model: model,
+				},
+				settings,
+			);
+			
+			if (videoResult.errorReason) {
+				await db
+					.update(messageGenerations)
+					.set({
+						status: "failed",
+						errorReason: videoResult.errorReason,
+						updatedAt: now,
+					})
+					.where(eq(messageGenerations.id, generationId));
+				return;
+			}
+
+			if (videoResult.videoUrl) {
+				// Download video from URL and save to files table
+				try {
+					const videoData = await fetchUrlToDataURI(videoResult.videoUrl, "mp4");
+					const fileIds = await saveFiles([videoData], userId);
+					
+					// Save file IDs to database
+					await db
+						.update(messageGenerations)
+						.set({
+							status: "completed",
+							fileIds: JSON.stringify(fileIds),
+							generationTime: Date.now() - now.getTime(),
+							updatedAt: now,
+						})
+						.where(eq(messageGenerations.id, generationId));
+				} catch (error) {
+					console.error("Error saving video file:", error);
+					await db
+						.update(messageGenerations)
+						.set({
+							status: "failed",
+							errorReason: "FILE_SAVE_ERROR",
+							updatedAt: now,
+						})
+						.where(eq(messageGenerations.id, generationId));
+				}
+			}
+		} else {
+			// Image generation
+			console.log(`[ChatService] Starting image generation for model ${modelId}`);
+			
+			const imageResult = await providerInstance.generate(
+				{
+					providerId,
+					modelId,
+					prompt,
+					images: referImages,
+					n: imageCount || 1, // Pass the image count to provider
+					aspectRatio: aspectRatio as any, // Pass the aspect ratio to provider
+					model: model,
+				},
+				settings,
+			);
+			
+			if (imageResult.errorReason) {
+				await db
+					.update(messageGenerations)
+					.set({
+						status: "failed",
+						errorReason: imageResult.errorReason,
+						updatedAt: now,
+					})
+					.where(eq(messageGenerations.id, generationId));
+				return;
+			}
+
+			// Save generated files to database
+			const fileIds = await saveFiles(imageResult.images, userId);
+			// Update generation with result URLs
 			await db
 				.update(messageGenerations)
-				.set({
-					status: "failed",
-					errorReason: result.errorReason,
-					updatedAt: now,
-				})
-				.where(eq(messageGenerations.id, generationId));
-			return;
+			.set({
+				status: "completed",
+				fileIds,
+				generationTime: Date.now() - now.getTime(),
+				updatedAt: now,
+			})
+			.where(eq(messageGenerations.id, generationId));
 		}
-
-		// Save generated files to database
-		const fileIds = await saveFiles(result.images, userId);
-		// Update generation with result URLs
-		await db
-			.update(messageGenerations)
-		.set({
-			status: "completed",
-			fileIds,
-			generationTime: Date.now() - now.getTime(),
-			updatedAt: now,
-		})
-		.where(eq(messageGenerations.id, generationId));
 	} catch (error) {
-		console.error("Error generating image:", error);
+		console.error("Error generating content:", error);
 		await db
 			.update(messageGenerations)
 			.set({
@@ -590,6 +669,9 @@ const createMessage = async (req: CreateMessage, ctx: RequestContext) => {
 	// Generate generation ID
 	const generationId = customAlphabet("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 16)();
 
+	// Determine generation type based on chat type
+	const generationType = chat.type === "text2video" ? "video" : "image";
+
 	// Create generation record
 	await db
 		.insert(messageGenerations)
@@ -599,12 +681,12 @@ const createMessage = async (req: CreateMessage, ctx: RequestContext) => {
 			prompt: req.content,
 			provider: req.provider,
 			model: req.model,
-			type: "image",
+			type: generationType,
 			status: "pending",
-			parameters: {
+			parameters: JSON.stringify({
 				imageCount: req.imageCount,
 				aspectRatio: req.aspectRatio,
-			} as any,
+			}),
 		});
 
 	const generation = await db.query.messageGenerations.findFirst({
@@ -623,7 +705,7 @@ const createMessage = async (req: CreateMessage, ctx: RequestContext) => {
 			chatId: req.chatId,
 			content: "",
 			role: "assistant",
-			type: "image",
+			type: generationType,
 			generationId: generation!.id,
 		});
 
@@ -771,8 +853,8 @@ const createMessageGenerate = async (req: CreateMessageGenerate, ctx: RequestCon
 	const imageCount = params?.imageCount || 1;
 	const aspectRatio = params?.aspectRatio;
 
-	// Execute image generation
-	await executeImageGeneration(
+	// Execute generation based on model type
+	await executeGeneration(
 		{
 			generationId: generation.id,
 			prompt: generation.prompt,
