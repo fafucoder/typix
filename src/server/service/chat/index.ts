@@ -379,6 +379,26 @@ const executeGeneration = async (params: GenerationParams, ctx: RequestContext) 
 		if (!dbModel) {
 			throw new ServiceException("not_found", `Model ${modelId} not found for provider ${providerId}`);
 		}
+
+		// Validate user has permission to generate (check order status and model usage limits)
+		const validationResult = await usageService.validateGenerationPermission(
+			userId,
+			dbModel.id,
+			imageCount || 1
+		);
+
+		if (!validationResult.canGenerate) {
+			console.log(`[ChatService] Generation validation failed for user ${userId}: ${validationResult.reason} - ${validationResult.message}`);
+			await db
+				.update(messageGenerations)
+				.set({
+					status: "failed",
+					errorReason: validationResult.reason || "USAGE_LIMIT_EXCEEDED",
+					updatedAt: new Date(),
+				})
+				.where(eq(messageGenerations.id, generationId));
+			return;
+		}
 		
 		// Build settings from database fields
 		const settings: ApiProviderSettings = {};

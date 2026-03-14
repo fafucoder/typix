@@ -69,6 +69,39 @@ export function GenerationErrorItem({ errorReason, provider, onRetry, className 
 					buttonIcon: RefreshCw,
 					buttonAction: "retry" as const,
 				};
+			case "NO_ACTIVE_ORDER":
+				return {
+					title: t("chat.generation.noActiveOrder"),
+					description: t("chat.generation.noActiveOrderDesc"),
+					buttonText: t("chat.generation.goToSubscribe"),
+					buttonIcon: Settings,
+					buttonAction: "subscribe" as const,
+				};
+			case "ORDER_EXPIRED":
+				return {
+					title: t("chat.generation.orderExpired"),
+					description: t("chat.generation.orderExpiredDesc"),
+					buttonText: t("chat.generation.goToSubscribe"),
+					buttonIcon: Settings,
+					buttonAction: "subscribe" as const,
+				};
+			case "MODEL_NOT_IN_SUBSCRIPTION":
+				return {
+					title: t("chat.generation.modelNotInSubscription"),
+					description: t("chat.generation.modelNotInSubscriptionDesc"),
+					buttonText: t("chat.generation.goToSubscribe"),
+					buttonIcon: Settings,
+					buttonAction: "subscribe" as const,
+				};
+			case "MODEL_USAGE_EXCEEDED":
+			case "USAGE_LIMIT_EXCEEDED":
+				return {
+					title: t("chat.generation.usageLimitExceeded"),
+					description: t("chat.generation.usageLimitExceededDesc"),
+					buttonText: t("chat.generation.goToSubscribe"),
+					buttonIcon: Settings,
+					buttonAction: "subscribe" as const,
+				};
 			default:
 				return {
 					title: t("chat.generation.unknownError"),
@@ -95,6 +128,11 @@ export function GenerationErrorItem({ errorReason, provider, onRetry, className 
 					to: "/settings/provider",
 				});
 			}
+		} else if (errorInfo.buttonAction === "subscribe") {
+			// Navigate to subscription page
+			navigate({
+				to: "/settings/subscription",
+			});
 		} else {
 			// Retry action
 			onRetry?.();

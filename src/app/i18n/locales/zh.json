@@ -90,7 +90,16 @@
       "unknownError": "未知错误",
       "unknownErrorDesc": "发生了意外错误，请重试",
       "goToSettings": "前往设置",
-      "retry": "重试"
+      "retry": "重试",
+      "goToSubscribe": "前往订阅",
+      "noActiveOrder": "无有效订单",
+      "noActiveOrderDesc": "您没有有效的套餐订单，请先购买套餐",
+      "orderExpired": "订单已过期",
+      "orderExpiredDesc": "您的套餐订单已过期，请续费或购买新套餐",
+      "modelNotInSubscription": "模型不在套餐中",
+      "modelNotInSubscriptionDesc": "当前套餐不包含此模型，请升级套餐",
+      "usageLimitExceeded": "用量已达上限",
+      "usageLimitExceededDesc": "该模型的使用次数已达上限，请升级套餐或等待重置"
     }
   },
   "navigation": {

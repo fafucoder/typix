@@ -87,7 +87,16 @@
       "unknownError": "Unknown error",
       "unknownErrorDesc": "An unexpected error occurred, please try again",
       "goToSettings": "Go to Settings",
-      "retry": "Retry"
+      "retry": "Retry",
+      "goToSubscribe": "Go to Subscribe",
+      "noActiveOrder": "No Active Order",
+      "noActiveOrderDesc": "You don't have an active subscription, please purchase a plan",
+      "orderExpired": "Order Expired",
+      "orderExpiredDesc": "Your subscription has expired, please renew or purchase a new plan",
+      "modelNotInSubscription": "Model Not in Subscription",
+      "modelNotInSubscriptionDesc": "This model is not included in your current plan, please upgrade",
+      "usageLimitExceeded": "Usage Limit Exceeded",
+      "usageLimitExceededDesc": "You have reached the usage limit for this model, please upgrade or wait for reset"
     }
   },
   "navigation": {

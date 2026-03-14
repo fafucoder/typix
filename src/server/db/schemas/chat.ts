@@ -25,6 +25,11 @@ const errorReason = [
 	"TIMEOUT",
 	"PROMPT_FLAGGED",
 	"INPUT_IMAGE_FLAGGED",
+	"NO_ACTIVE_ORDER",
+	"ORDER_EXPIRED",
+	"MODEL_NOT_IN_SUBSCRIPTION",
+	"MODEL_USAGE_EXCEEDED",
+	"USAGE_LIMIT_EXCEEDED",
 	"UNKNOWN",
 ] as const;
 export type ErrorReason = (typeof errorReason)[number];

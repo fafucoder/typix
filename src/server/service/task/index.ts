@@ -65,6 +65,26 @@ class TaskService {
 				throw new Error("Provider or model not found");
 			}
 
+			// Validate user has permission to generate (check order status and model usage limits)
+			const validationResult = await usageService.validateGenerationPermission(
+				task.userId,
+				dbModel.id,
+				1
+			);
+
+			if (!validationResult.canGenerate) {
+				console.log(`[TaskService] Generation validation failed for user ${task.userId}: ${validationResult.reason} - ${validationResult.message}`);
+				await db
+					.update(messageGenerations)
+					.set({
+						status: "failed",
+						errorReason: validationResult.reason || "USAGE_LIMIT_EXCEEDED",
+						updatedAt: new Date(),
+					})
+					.where(eq(messageGenerations.id, task.id));
+				return;
+			}
+
 			// Get provider instance
 			const providerInstance = getProviderById(dbProvider.providerId);
 
