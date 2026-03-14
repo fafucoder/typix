@@ -249,7 +249,13 @@ class TaskService {
 					try {
 						const activeOrder = await usageService.getUserActiveOrder(task.userId);
 						if (activeOrder) {
-							await usageService.recordUsage(task.userId, activeOrder.id, dbModel.id, 1);
+							await usageService.recordUsage({
+								userId: task.userId,
+								orderId: activeOrder.id,
+								modelId: dbModel.id,
+								usageType: "text2video",
+								generationId: task.id,
+							});
 							console.log(`[TaskService] Recorded video usage for user ${task.userId}, order ${activeOrder.id}, model ${dbModel.id}`);
 						} else {
 							console.warn(`[TaskService] No active order found for user ${task.userId}, skipping usage recording`);

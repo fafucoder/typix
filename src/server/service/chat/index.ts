@@ -564,7 +564,13 @@ const executeGeneration = async (params: GenerationParams, ctx: RequestContext) 
 					try {
 						const activeOrder = await usageService.getUserActiveOrder(userId);
 						if (activeOrder) {
-							await usageService.recordUsage(userId, activeOrder.id, dbModel.id, 1);
+							await usageService.recordUsage({
+								userId,
+								orderId: activeOrder.id,
+								modelId: dbModel.id,
+								usageType: "text2video",
+								generationId,
+							});
 							console.log(`[ChatService] Recorded video usage for user ${userId}, order ${activeOrder.id}, model ${dbModel.id}`);
 						} else {
 							console.warn(`[ChatService] No active order found for user ${userId}, skipping usage recording`);
@@ -630,7 +636,14 @@ const executeGeneration = async (params: GenerationParams, ctx: RequestContext) 
 			try {
 				const activeOrder = await usageService.getUserActiveOrder(userId);
 				if (activeOrder) {
-					await usageService.recordUsage(userId, activeOrder.id, dbModel.id, imageCount || 1);
+					await usageService.recordUsage({
+						userId,
+						orderId: activeOrder.id,
+						modelId: dbModel.id,
+						count: imageCount || 1,
+						usageType: "text2image",
+						generationId,
+					});
 					console.log(`[ChatService] Recorded usage for user ${userId}, order ${activeOrder.id}, model ${dbModel.id}`);
 				} else {
 					console.warn(`[ChatService] No active order found for user ${userId}, skipping usage recording`);

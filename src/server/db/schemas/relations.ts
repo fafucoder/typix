@@ -6,6 +6,8 @@ import { userCoupon } from "./user-coupon";
 import { user } from "./auth";
 import { chats, messages, messageGenerations, messageAttachments } from "./chat";
 import { files } from "./file";
+import { modelUsageStats, modelUsageDetails } from "./usage";
+import { aiModels } from "./ai";
 
 export const orderRelations = relations(order, ({ one, many }) => ({
 	subscribe: one(subscribe, {
@@ -70,5 +72,31 @@ export const messageAttachmentsRelations = relations(messageAttachments, ({ one 
 	file: one(files, {
 		fields: [messageAttachments.fileId],
 		references: [files.id],
+	}),
+}));
+
+export const modelUsageStatsRelations = relations(modelUsageStats, ({ one }) => ({
+	user: one(user, {
+		fields: [modelUsageStats.userId],
+		references: [user.id],
+	}),
+	model: one(aiModels, {
+		fields: [modelUsageStats.modelId],
+		references: [aiModels.id],
+	}),
+}));
+
+export const modelUsageDetailsRelations = relations(modelUsageDetails, ({ one }) => ({
+	user: one(user, {
+		fields: [modelUsageDetails.userId],
+		references: [user.id],
+	}),
+	order: one(order, {
+		fields: [modelUsageDetails.orderId],
+		references: [order.id],
+	}),
+	model: one(aiModels, {
+		fields: [modelUsageDetails.modelId],
+		references: [aiModels.id],
 	}),
 }));

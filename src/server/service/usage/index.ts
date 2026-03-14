@@ -1,25 +1,28 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, gte, lte, between, desc } from "drizzle-orm";
 import { getContext } from "../context";
-import { modelUsageStats } from "../../db/schemas/usage";
+import { modelUsageStats, modelUsageDetails } from "../../db/schemas/usage";
 import { order } from "../../db/schemas/order";
 import { subscribeModel } from "../../db/schemas/subscribe";
 import { customAlphabet } from "nanoid/non-secure";
 
 const generateId = () => customAlphabet("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 16)();
 
+export interface RecordUsageOptions {
+	userId: string;
+	orderId: string;
+	modelId: string;
+	count?: number;
+	usageType: string;
+	generationId?: string;
+	metadata?: string;
+}
+
 export class UsageService {
-	/**
-	 * 记录模型使用量
-	 * @param userId 用户ID
-	 * @param orderId 订单ID
-	 * @param modelId 模型ID
-	 * @param count 使用次数（默认为1）
-	 */
-	async recordUsage(userId: string, orderId: string, modelId: string, count: number = 1) {
+	async recordUsage(options: RecordUsageOptions) {
 		const { db } = getContext();
+		const { userId, orderId, modelId, count = 1, usageType, generationId, metadata } = options;
 
 		try {
-			// 检查是否已存在记录
 			const existingStat = await db.query.modelUsageStats.findFirst({
 				where: and(
 					eq(modelUsageStats.userId, userId),
@@ -29,7 +32,6 @@ export class UsageService {
 			});
 
 			if (existingStat) {
-				// 更新现有记录
 				await db
 					.update(modelUsageStats)
 					.set({
@@ -38,7 +40,6 @@ export class UsageService {
 					})
 					.where(eq(modelUsageStats.id, existingStat.id));
 			} else {
-				// 创建新记录
 				await db.insert(modelUsageStats).values({
 					id: generateId(),
 					userId,
@@ -50,6 +51,18 @@ export class UsageService {
 				});
 			}
 
+			await db.insert(modelUsageDetails).values({
+				id: generateId(),
+				userId,
+				orderId,
+				modelId,
+				usageType,
+				count,
+				generationId,
+				metadata,
+				createdAt: new Date(),
+			});
+
 			return { success: true };
 		} catch (error) {
 			console.error("[UsageService] Error recording usage:", error);
@@ -57,47 +70,152 @@ export class UsageService {
 		}
 	}
 
-	/**
-	 * 获取用户的用量统计
-	 * @param userId 用户ID
-	 * @param orderId 订单ID（可选）
-	 */
+	async getUserUsageDetails(
+		userId: string,
+		options?: {
+			orderId?: string;
+			modelId?: string;
+			usageType?: string;
+			startDate?: Date;
+			endDate?: Date;
+			limit?: number;
+		}
+	) {
+		const { db } = getContext();
+
+		try {
+			const conditions: any[] = [eq(modelUsageDetails.userId, userId)];
+
+			if (options?.orderId) {
+				conditions.push(eq(modelUsageDetails.orderId, options.orderId));
+			}
+			if (options?.modelId) {
+				conditions.push(eq(modelUsageDetails.modelId, options.modelId));
+			}
+			if (options?.usageType) {
+				conditions.push(eq(modelUsageDetails.usageType, options.usageType));
+			}
+			if (options?.startDate && options?.endDate) {
+				conditions.push(between(modelUsageDetails.createdAt, options.startDate, options.endDate));
+			} else if (options?.startDate) {
+				conditions.push(gte(modelUsageDetails.createdAt, options.startDate));
+			} else if (options?.endDate) {
+				conditions.push(lte(modelUsageDetails.createdAt, options.endDate));
+			}
+
+			const details = await db.query.modelUsageDetails.findMany({
+				where: and(...conditions),
+				with: {
+					model: true,
+				},
+				orderBy: [desc(modelUsageDetails.createdAt)],
+				limit: options?.limit || 100,
+			});
+
+			return details;
+		} catch (error) {
+			console.error("[UsageService] Error getting user usage details:", error);
+			throw error;
+		}
+	}
+
+	async getModelDailyUsage(
+		modelId: string,
+		options?: {
+			startDate?: Date;
+			endDate?: Date;
+		}
+	) {
+		const { db } = getContext();
+
+		try {
+			const conditions: any[] = [eq(modelUsageDetails.modelId, modelId)];
+
+			if (options?.startDate && options?.endDate) {
+				conditions.push(between(modelUsageDetails.createdAt, options.startDate, options.endDate));
+			}
+
+			const result = await db
+				.select({
+					date: sql<string>`DATE(${modelUsageDetails.createdAt})`,
+					totalCount: sql<number>`SUM(${modelUsageDetails.count})`,
+					usageCount: sql<number>`COUNT(*)`,
+				})
+				.from(modelUsageDetails)
+				.where(and(...conditions))
+				.groupBy(sql`DATE(${modelUsageDetails.createdAt})`)
+				.orderBy(sql`DATE(${modelUsageDetails.createdAt}) DESC`);
+
+			return result;
+		} catch (error) {
+			console.error("[UsageService] Error getting model daily usage:", error);
+			throw error;
+		}
+	}
+
+	async getUserDailyUsage(
+		userId: string,
+		options?: {
+			modelId?: string;
+			startDate?: Date;
+			endDate?: Date;
+		}
+	) {
+		const { db } = getContext();
+
+		try {
+			const conditions: any[] = [eq(modelUsageDetails.userId, userId)];
+
+			if (options?.modelId) {
+				conditions.push(eq(modelUsageDetails.modelId, options.modelId));
+			}
+			if (options?.startDate && options?.endDate) {
+				conditions.push(between(modelUsageDetails.createdAt, options.startDate, options.endDate));
+			}
+
+			const result = await db
+				.select({
+					date: sql<string>`DATE(${modelUsageDetails.createdAt})`,
+					modelId: modelUsageDetails.modelId,
+					totalCount: sql<number>`SUM(${modelUsageDetails.count})`,
+					usageCount: sql<number>`COUNT(*)`,
+				})
+				.from(modelUsageDetails)
+				.where(and(...conditions))
+				.groupBy(sql`DATE(${modelUsageDetails.createdAt})`, modelUsageDetails.modelId)
+				.orderBy(sql`DATE(${modelUsageDetails.createdAt}) DESC`);
+
+			return result;
+		} catch (error) {
+			console.error("[UsageService] Error getting user daily usage:", error);
+			throw error;
+		}
+	}
+
 	async getUserUsageStats(userId: string, orderId?: string) {
 		const { db } = getContext();
 
 		try {
-			let query = db.query.modelUsageStats.findMany({
-				where: eq(modelUsageStats.userId, userId),
+			const conditions: any[] = [eq(modelUsageStats.userId, userId)];
+			if (orderId) {
+				conditions.push(eq(modelUsageStats.orderId, orderId));
+			}
+
+			const stats = await db.query.modelUsageStats.findMany({
+				where: and(...conditions),
 				with: {
 					model: true,
 				},
 				orderBy: (stats, { desc }) => [desc(stats.updatedAt)],
 			});
 
-			if (orderId) {
-				query = db.query.modelUsageStats.findMany({
-					where: and(
-						eq(modelUsageStats.userId, userId),
-						eq(modelUsageStats.orderId, orderId)
-					),
-					with: {
-						model: true,
-					},
-					orderBy: (stats, { desc }) => [desc(stats.updatedAt)],
-				});
-			}
-
-			return await query;
+			return stats;
 		} catch (error) {
 			console.error("[UsageService] Error getting user usage stats:", error);
 			throw error;
 		}
 	}
 
-	/**
-	 * 获取订单的用量统计
-	 * @param orderId 订单ID
-	 */
 	async getOrderUsageStats(orderId: string) {
 		const { db } = getContext();
 
@@ -118,10 +236,6 @@ export class UsageService {
 		}
 	}
 
-	/**
-	 * 获取模型的用量统计
-	 * @param modelId 模型ID
-	 */
 	async getModelUsageStats(modelId: string) {
 		const { db } = getContext();
 
@@ -141,10 +255,6 @@ export class UsageService {
 		}
 	}
 
-	/**
-	 * 获取用户的当前有效订单（已支付且未过期）
-	 * @param userId 用户ID
-	 */
 	async getUserActiveOrder(userId: string) {
 		const { db } = getContext();
 
@@ -164,7 +274,6 @@ export class UsageService {
 				return null;
 			}
 
-			// 检查是否过期
 			if (activeOrder.expiresAt && new Date() > activeOrder.expiresAt) {
 				return null;
 			}
@@ -176,12 +285,6 @@ export class UsageService {
 		}
 	}
 
-	/**
-	 * 检查用户是否有足够的额度
-	 * @param userId 用户ID
-	 * @param orderId 订单ID
-	 * @param requiredCredits 需要的积分
-	 */
 	async checkUserCredits(userId: string, orderId: string, requiredCredits: number = 1) {
 		const { db } = getContext();
 
@@ -201,12 +304,10 @@ export class UsageService {
 				return { hasCredits: false, reason: "NO_ACTIVE_ORDER" };
 			}
 
-			// 检查是否过期
 			if (userOrder.expiresAt && new Date() > userOrder.expiresAt) {
 				return { hasCredits: false, reason: "ORDER_EXPIRED" };
 			}
 
-			// 获取已使用量
 			const usageResult = await db
 				.select({ totalUsage: sql<number>`COALESCE(SUM(${modelUsageStats.usageCount}), 0)` })
 				.from(modelUsageStats)
@@ -216,7 +317,6 @@ export class UsageService {
 			const totalCredits = userOrder.subscribe?.credits || 0;
 			const remainingCredits = totalCredits - totalUsage;
 
-			// 检查剩余额度
 			if (remainingCredits < requiredCredits) {
 				return { hasCredits: false, reason: "INSUFFICIENT_CREDITS", remainingCredits };
 			}
@@ -233,13 +333,6 @@ export class UsageService {
 		}
 	}
 
-	/**
-	 * 校验用户是否可以生成内容（检查订单状态和模型用量限制）
-	 * @param userId 用户ID
-	 * @param modelId 模型ID（数据库中的模型ID）
-	 * @param requiredCount 需要的生成次数（默认为1）
-	 * @returns 校验结果
-	 */
 	async validateGenerationPermission(
 		userId: string,
 		modelId: string,
@@ -253,7 +346,6 @@ export class UsageService {
 		const { db } = getContext();
 
 		try {
-			// 1. 获取用户的当前有效订单
 			const activeOrder = await db.query.order.findFirst({
 				where: and(
 					eq(order.userId, userId),
@@ -273,7 +365,6 @@ export class UsageService {
 				};
 			}
 
-			// 2. 检查订单是否过期
 			if (activeOrder.expiresAt && new Date() > activeOrder.expiresAt) {
 				return {
 					canGenerate: false,
@@ -283,7 +374,6 @@ export class UsageService {
 				};
 			}
 
-			// 3. 检查模型是否在套餐中
 			const subscribeModelConfig = await db.query.subscribeModel.findFirst({
 				where: and(
 					eq(subscribeModel.subscribeId, activeOrder.subscribeId),
@@ -301,7 +391,6 @@ export class UsageService {
 				};
 			}
 
-			// 4. 检查模型用量限制（如果 maxUsage > 0 表示有限制）
 			if (subscribeModelConfig.maxUsage > 0) {
 				const usageResult = await db
 					.select({ totalUsage: sql<number>`COALESCE(SUM(${modelUsageStats.usageCount}), 0)` })
@@ -326,7 +415,6 @@ export class UsageService {
 				}
 			}
 
-			// 所有校验通过
 			return {
 				canGenerate: true,
 				orderId: activeOrder.id,

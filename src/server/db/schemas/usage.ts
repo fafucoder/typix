@@ -1,7 +1,8 @@
-import { mysqlTable, varchar, int, timestamp, index, unique } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, int, timestamp, index, unique, text } from "drizzle-orm/mysql-core";
 import { user } from "./auth";
 import { subscribe } from "./subscribe";
 import { aiModels } from "./ai";
+import { order } from "./order";
 
 // 用户用量统计表 - 记录每个用户、每个套餐、每个模型的使用量
 export const modelUsageStats = mysqlTable(
@@ -16,9 +17,7 @@ export const modelUsageStats = mysqlTable(
 		modelId: varchar("model_id", { length: 255 })
 			.notNull()
 			.references(() => aiModels.id, { onDelete: "cascade" }),
-		// 使用量统计
-		usageCount: int("usage_count").default(0).notNull(), // 使用次数
-		// 时间戳
+		usageCount: int("usage_count").default(0).notNull(),
 		createdAt: timestamp("created_at")
 			.$defaultFn(() => /* @__PURE__ */ new Date())
 			.notNull(),
@@ -27,13 +26,40 @@ export const modelUsageStats = mysqlTable(
 			.notNull(),
 	},
 	(t) => [
-		// 联合唯一索引：每个用户、每个订单、每个模型的组合唯一
 		unique().on(t.userId, t.orderId, t.modelId),
-		// 索引：按用户查询
 		index("idx_user_id").on(t.userId),
-		// 索引：按订单查询
 		index("idx_order_id").on(t.orderId),
-		// 索引：按模型查询
 		index("idx_model_id").on(t.modelId),
+	],
+);
+
+// 模型使用明细表 - 记录每次使用的详细信息
+export const modelUsageDetails = mysqlTable(
+	"model_usage_details",
+	{
+		id: varchar("id", { length: 255 }).primaryKey(),
+		userId: varchar("user_id", { length: 255 })
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		orderId: varchar("order_id", { length: 255 })
+			.notNull()
+			.references(() => order.id, { onDelete: "cascade" }),
+		modelId: varchar("model_id", { length: 255 })
+			.notNull()
+			.references(() => aiModels.id, { onDelete: "cascade" }),
+		generationId: varchar("generation_id", { length: 255 }),
+		usageType: varchar("usage_type", { length: 50 }).notNull(),
+		count: int("count").default(1).notNull(),
+		metadata: text("metadata"),
+		createdAt: timestamp("created_at")
+			.$defaultFn(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(t) => [
+		index("idx_detail_user_id").on(t.userId),
+		index("idx_detail_order_id").on(t.orderId),
+		index("idx_detail_model_id").on(t.modelId),
+		index("idx_detail_created_at").on(t.createdAt),
+		index("idx_detail_usage_type").on(t.usageType),
 	],
 );
