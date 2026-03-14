@@ -54,24 +54,22 @@ function OrdersPage() {
 
 	const getStatusBadge = (status: string) => {
 		const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-			pending: { label: "待支付", variant: "outline" },
-			paid: { label: "已支付", variant: "default" },
-			cancelled: { label: "已取消", variant: "secondary" },
-			refunded: { label: "已退款", variant: "secondary" },
-			expired: { label: "已过期", variant: "destructive" },
+			pending: { label: t("settings.orders.pending"), variant: "outline" },
+			paid: { label: t("settings.orders.paid"), variant: "default" },
+			cancelled: { label: t("settings.orders.cancelled"), variant: "secondary" },
+			refunded: { label: t("settings.orders.refunded"), variant: "secondary" },
+			expired: { label: t("settings.orders.expired"), variant: "destructive" },
 		};
 		const statusInfo = statusMap[status] || { label: status, variant: "outline" };
 		return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
 	};
-
-
 
 	const handleCancelOrder = async (orderId: string) => {
 		try {
 			await orderService.cancelOrder(orderId);
 			window.location.reload();
 		} catch (error) {
-			console.error("取消订单失败:", error);
+			console.error(t("settings.orders.cancel") + ":", error);
 		}
 	};
 
@@ -108,7 +106,7 @@ function OrdersPage() {
 		if (!order.subscribe?.duration) return "-";
 		const startDate = new Date(order.createdAt);
 		const endDate = order.expiresAt ? new Date(order.expiresAt) : new Date(startDate.getTime() + order.subscribe.duration * 24 * 60 * 60 * 1000);
-		return `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')} 至 ${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
+		return `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')} ${t("settings.orders.to")} ${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
 	};
 
 	// 计算账单日期
@@ -150,12 +148,12 @@ function OrdersPage() {
 												<h3 className="text-xl font-semibold">{currentSubscription.name}</h3>
 												<div className="mt-2 space-y-1 text-sm text-muted-foreground">
 													<p>
-														<span className="font-medium text-foreground">有效期：</span>
+														<span className="font-medium text-foreground">{t("settings.orders.validPeriod")}：</span>
 														{formatDate(currentSubscription.startDate)} - {formatDate(currentSubscription.endDate)}
 													</p>
 													<p>
-														<span className="font-medium text-foreground">套餐时长：</span>
-														{currentSubscription.duration} 天
+														<span className="font-medium text-foreground">{t("settings.orders.planDuration")}：</span>
+														{currentSubscription.duration} {t("settings.orders.planDurationDays")}
 													</p>
 												</div>
 											</div>
@@ -172,7 +170,7 @@ function OrdersPage() {
 							
 							<Card>
 								<CardHeader className="pb-2">
-									<CardTitle>可用模型能力</CardTitle>
+									<CardTitle>{t("settings.orders.availableModels")}</CardTitle>
 								</CardHeader>
 								<CardContent className="pt-0">
 									<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
@@ -195,13 +193,13 @@ function OrdersPage() {
 													<div className="flex-1 min-w-0">
 														<span className="text-sm font-medium block truncate">{model.name}</span>
 														<span className="text-xs text-muted-foreground">
-															{model.maxUsage === 0 ? '无限次' : `${model.maxUsage.toLocaleString()} 次`}
+															{model.maxUsage === 0 ? t("settings.orders.unlimited") : `${model.maxUsage.toLocaleString()} ${t("settings.orders.times")}`}
 														</span>
 													</div>
 												</div>
 											))
 										) : (
-											<p className="text-sm text-muted-foreground col-span-full text-center py-4">暂无模型信息</p>
+											<p className="text-sm text-muted-foreground col-span-full text-center py-4">{t("settings.orders.noModelInfo")}</p>
 										)}
 									</div>
 								</CardContent>
@@ -259,13 +257,13 @@ function OrdersPage() {
 							<Table>
 								<TableHeader>
 									<TableRow>
-										<TableHead>订单号</TableHead>
-										<TableHead>套餐名称</TableHead>
-										<TableHead>账单日期</TableHead>
-										<TableHead>到期日期</TableHead>
-										<TableHead>金额</TableHead>
-										<TableHead>状态</TableHead>
-										<TableHead>操作</TableHead>
+										<TableHead>{t("settings.orders.orderNo")}</TableHead>
+										<TableHead>{t("settings.orders.planName")}</TableHead>
+										<TableHead>{t("settings.orders.billDate")}</TableHead>
+										<TableHead>{t("settings.orders.expiryDate")}</TableHead>
+										<TableHead>{t("settings.orders.amount")}</TableHead>
+										<TableHead>{t("settings.orders.status")}</TableHead>
+										<TableHead>{t("settings.orders.actions")}</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
@@ -287,15 +285,15 @@ function OrdersPage() {
 													<DropdownMenuContent align="end">
 														<DropdownMenuItem onClick={() => handleViewDetail(order)}>
 															<Eye size={16} className="mr-2" />
-															查看详情
+															{t("settings.orders.viewDetail")}
 														</DropdownMenuItem>
 														{order.status === "pending" && (
 															<>
 																<DropdownMenuItem>
-																	去支付
+																	{t("settings.orders.goToPay")}
 																</DropdownMenuItem>
 																<DropdownMenuItem onClick={() => handleCancelOrder(order.id)}>
-																	取消订单
+																	{t("settings.orders.cancel")}
 																</DropdownMenuItem>
 															</>
 														)}
@@ -352,107 +350,103 @@ function OrdersPage() {
 			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
 				<DialogContent className="max-w-2xl">
 					<DialogHeader>
-						<DialogTitle>订单详情</DialogTitle>
+						<DialogTitle>{t("settings.orders.orderDetail")}</DialogTitle>
 					</DialogHeader>
 					{selectedOrder && (
 						<div className="space-y-6">
-							{/* 订单基本信息 */}
 							<Card>
 								<CardHeader>
-									<CardTitle>基本信息</CardTitle>
+									<CardTitle>{t("settings.orders.basicInfo")}</CardTitle>
 								</CardHeader>
 								<CardContent className="space-y-3">
 									<div className="flex justify-between">
-										<span className="text-muted-foreground">订单号</span>
+										<span className="text-muted-foreground">{t("settings.orders.orderNo")}</span>
 										<span className="font-medium">{selectedOrder.orderNo}</span>
 									</div>
 									<div className="flex justify-between">
-										<span className="text-muted-foreground">订单状态</span>
+										<span className="text-muted-foreground">{t("settings.orders.orderStatus")}</span>
 										{getStatusBadge(selectedOrder.status)}
 									</div>
 									<div className="flex justify-between">
-										<span className="text-muted-foreground">订单类型</span>
-										<span>{selectedOrder.type === "subscription" ? "订阅" : "充值"}</span>
+										<span className="text-muted-foreground">{t("settings.orders.orderType")}</span>
+										<span>{selectedOrder.type === "subscription" ? t("settings.orders.subscription") : t("settings.orders.credits")}</span>
 									</div>
 									<div className="flex justify-between">
-										<span className="text-muted-foreground">创建时间</span>
+										<span className="text-muted-foreground">{t("settings.orders.createdAt")}</span>
 										<span>{formatDate(selectedOrder.createdAt)}</span>
 									</div>
 									{selectedOrder.expiresAt && (
 										<div className="flex justify-between">
-											<span className="text-muted-foreground">到期时间</span>
+											<span className="text-muted-foreground">{t("settings.orders.expiresAt")}</span>
 											<span>{formatDate(selectedOrder.expiresAt)}</span>
 										</div>
 									)}
 								</CardContent>
 							</Card>
 
-							{/* 套餐信息 */}
 							{selectedOrder.subscribe && (
 								<Card>
 									<CardHeader>
-										<CardTitle>套餐信息</CardTitle>
+										<CardTitle>{t("settings.orders.planInfo")}</CardTitle>
 									</CardHeader>
 									<CardContent className="space-y-3">
 										<div className="flex justify-between">
-											<span className="text-muted-foreground">套餐名称</span>
+											<span className="text-muted-foreground">{t("settings.orders.planName")}</span>
 											<span className="font-medium">{selectedOrder.subscribe.name}</span>
 										</div>
 										{selectedOrder.subscribe.description && (
 											<div className="flex justify-between">
-												<span className="text-muted-foreground">套餐描述</span>
+												<span className="text-muted-foreground">{t("settings.orders.planDescription")}</span>
 												<span>{selectedOrder.subscribe.description}</span>
 											</div>
 										)}
 										<div className="flex justify-between">
-											<span className="text-muted-foreground">套餐时长</span>
-											<span>{selectedOrder.subscribe.duration} 天</span>
+											<span className="text-muted-foreground">{t("settings.orders.planDuration")}</span>
+											<span>{selectedOrder.subscribe.duration} {t("settings.orders.planDurationDays")}</span>
 										</div>
 									</CardContent>
 								</Card>
 							)}
 
-							{/* 金额信息 */}
 							<Card>
 								<CardHeader>
-									<CardTitle>金额信息</CardTitle>
+									<CardTitle>{t("settings.orders.amountInfo")}</CardTitle>
 								</CardHeader>
 								<CardContent className="space-y-3">
 									<div className="flex justify-between">
-										<span className="text-muted-foreground">原价</span>
+										<span className="text-muted-foreground">{t("settings.orders.originalPrice")}</span>
 										<span>¥{formatPrice(selectedOrder.totalAmount)}</span>
 									</div>
 									{selectedOrder.discountAmount > 0 && (
 										<div className="flex justify-between">
-											<span className="text-muted-foreground">优惠金额</span>
+											<span className="text-muted-foreground">{t("settings.orders.discountAmount")}</span>
 											<span className="text-red-500">-¥{formatPrice(selectedOrder.discountAmount)}</span>
 										</div>
 									)}
 									<div className="flex justify-between text-lg font-medium">
-										<span>实付金额</span>
+										<span>{t("settings.orders.paidAmount")}</span>
 										<span className="text-primary">¥{formatPrice(selectedOrder.actualAmount)}</span>
 									</div>
 								</CardContent>
 							</Card>
 
-							{/* 优惠券信息 */}
 							{selectedOrder.coupon && (
 								<Card>
 									<CardHeader>
-										<CardTitle>优惠券信息</CardTitle>
+										<CardTitle>{t("settings.orders.couponInfo")}</CardTitle>
 									</CardHeader>
 									<CardContent className="space-y-3">
 										<div className="flex justify-between">
-											<span className="text-muted-foreground">优惠券码</span>
+											<span className="text-muted-foreground">{t("settings.orders.couponCode")}</span>
 											<span className="font-medium">{selectedOrder.coupon.code}</span>
 										</div>
 										<div className="flex justify-between">
-											<span className="text-muted-foreground">优惠券名称</span>
+											<span className="text-muted-foreground">{t("settings.orders.couponName")}</span>
 											<span>{selectedOrder.coupon.name}</span>
 										</div>
 										{selectedOrder.coupon.description && (
 											<div className="flex justify-between">
-												<span className="text-muted-foreground">优惠券描述</span>
+												<span className="text-muted-foreground">{t("settings.orders.couponDescription")}</span>
 												<span>{selectedOrder.coupon.description}</span>
 											</div>
 										)}
@@ -460,18 +454,17 @@ function OrdersPage() {
 								</Card>
 							)}
 
-							{/* 支付记录 */}
 							{selectedOrder.payments && selectedOrder.payments.length > 0 && (
 								<Card>
 									<CardHeader>
-										<CardTitle>支付记录</CardTitle>
+										<CardTitle>{t("settings.orders.paymentRecords")}</CardTitle>
 									</CardHeader>
 									<CardContent>
 										<div className="space-y-2">
 											{selectedOrder.payments.map((payment) => (
 												<div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
 													<div>
-														<div className="font-medium">金额: ¥{formatPrice(payment.amount)}</div>
+														<div className="font-medium">{t("settings.orders.paymentAmount")}: ¥{formatPrice(payment.amount)}</div>
 														{payment.processedAt && (
 															<div className="text-sm text-muted-foreground">
 																{formatDate(payment.processedAt)}
@@ -486,11 +479,10 @@ function OrdersPage() {
 								</Card>
 							)}
 
-							{/* 备注 */}
 							{selectedOrder.remark && (
 								<Card>
 									<CardHeader>
-										<CardTitle>备注</CardTitle>
+										<CardTitle>{t("settings.orders.remark")}</CardTitle>
 									</CardHeader>
 									<CardContent>
 										<p className="text-muted-foreground">{selectedOrder.remark}</p>
