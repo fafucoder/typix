@@ -691,11 +691,23 @@ const getGenerationStatus = async (req: GetGenerationStatus, ctx: RequestContext
 		}
 	}
 
+	// Parse fileIds from JSON string or plain string
+	let fileIds: string[] | null = null;
+	if (generation.fileIds) {
+		try {
+			const parsed = JSON.parse(generation.fileIds);
+			fileIds = Array.isArray(parsed) ? parsed : [parsed];
+		} catch {
+			// If JSON parse fails, treat it as a single file ID
+			fileIds = [generation.fileIds];
+		}
+	}
+
 	return {
 		...generation,
-		resultUrls: generation.fileIds
+		resultUrls: fileIds
 			? await Promise.all(
-					(generation.fileIds as string[]).map(async (fileId) => {
+					fileIds.map(async (fileId) => {
 						return await getFileUrl(fileId, userId);
 					}),
 				)
