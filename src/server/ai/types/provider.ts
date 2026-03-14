@@ -1,5 +1,5 @@
 import { ServiceException } from "@/server/lib/exception";
-import type { TypixChatApiResponse, TypixGenerateRequest } from "./api";
+import type { TypixChatApiResponse, TypixGenerateRequest, TypixVideoGenerateRequest, TypixVideoApiResponse } from "./api";
 import type { Ability, AiModel } from "./model";
 
 export type ApiProviderSettingsItemValue = string | number | boolean;
@@ -26,6 +26,7 @@ export interface AiProvider {
 
 	parseSettings<T>(settings: ApiProviderSettings): T;
 	generate: (request: TypixGenerateRequest, settings: ApiProviderSettings) => Promise<TypixChatApiResponse>;
+	generateVideo?: (request: TypixVideoGenerateRequest, settings: ApiProviderSettings) => Promise<TypixVideoApiResponse>;
 }
 
 // Generic type-safe settings accessor

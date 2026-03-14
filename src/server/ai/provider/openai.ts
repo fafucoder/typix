@@ -2,6 +2,7 @@ import { base64ToDataURI, fetchUrlToDataURI } from "@/server/lib/util";
 import openai from "openai";
 import type { AiProvider, ApiProviderSettings, ApiProviderSettingsItem } from "../types/provider";
 import { type ProviderSettingsType, doParseSettings } from "../types/provider";
+import type { TypixVideoGenerateRequest, TypixVideoApiResponse } from "../types/api";
 
 // Convert DataURI base64 string to FsReadStream compatible format
 function createImageStreamFromDataUri(dataUri: string) {
@@ -135,6 +136,128 @@ const OpenAI: AiProvider = {
 			).then((results) => results.filter(Boolean) as string[]),
 		};
 	},
+
+	generateVideo: async (request: TypixVideoGenerateRequest, settings: ApiProviderSettings): Promise<TypixVideoApiResponse> => {
+		const { baseURL, apiKey, model } = OpenAI.parseSettings<OpenAISettings>(settings);
+
+		try {
+			// OpenAI Sora video generation
+			const videoModel = model || "sora";
+			
+			// Create video generation request
+			const response = await fetch(`${baseURL}/videos/generations`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"Authorization": `Bearer ${apiKey}`,
+				},
+				body: JSON.stringify({
+					model: videoModel,
+					prompt: request.prompt,
+					...(request.aspectRatio && { aspect_ratio: request.aspectRatio }),
+					...(request.duration && { duration: request.duration }),
+				}),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({})) as Record<string, unknown>;
+				if (response.status === 401 || response.status === 403) {
+					return {
+						errorReason: "CONFIG_ERROR",
+					};
+				}
+				if (response.status === 429) {
+					return {
+						errorReason: "TOO_MANY_REQUESTS",
+					};
+				}
+				if (response.status === 400) {
+					return {
+						errorReason: "API_ERROR",
+					};
+				}
+				throw new Error((errorData.message as string) || `HTTP error! status: ${response.status}`);
+			}
+
+			const result = await response.json() as { id: string };
+
+			if (!result.id) {
+				return {
+					errorReason: "UNKNOWN",
+				};
+			}
+
+			const videoUrl = await pollVideoTask(result.id, apiKey, baseURL || "https://api.openai.com/v1");
+
+			if (videoUrl) {
+				return {
+					videoUrl,
+					status: "completed",
+				};
+			}
+
+			return {
+				errorReason: "UNKNOWN",
+			};
+		} catch (error) {
+			console.error("OpenAI video generation error:", error);
+			return {
+				errorReason: "UNKNOWN",
+			};
+		}
+	},
 };
+
+async function pollVideoTask(taskId: string, apiKey: string, baseURL: string): Promise<string | null> {
+	const maxAttempts = 120;
+	const interval = 15000;
+
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		try {
+			const response = await fetch(`${baseURL}/videos/generations/${taskId}`, {
+				method: "GET",
+				headers: {
+					"Authorization": `Bearer ${apiKey}`,
+				},
+			});
+
+			if (!response.ok) {
+				console.error(`Failed to poll video task status: ${response.status}`);
+				await new Promise(resolve => setTimeout(resolve, interval));
+				continue;
+			}
+
+			const result = await response.json() as {
+				status: string;
+				video_url?: string;
+			};
+
+			const taskStatus = result.status;
+
+			if (taskStatus === "completed" && result.video_url) {
+				return result.video_url;
+			}
+
+			if (taskStatus === "failed") {
+				console.error("Video generation failed");
+				return null;
+			}
+
+			if (taskStatus === "processing" || taskStatus === "pending") {
+				await new Promise(resolve => setTimeout(resolve, interval));
+				continue;
+			}
+
+			console.error("Unknown task status:", taskStatus);
+			return null;
+		} catch (error) {
+			console.error("Error polling video task status:", error);
+			await new Promise(resolve => setTimeout(resolve, interval));
+		}
+	}
+
+	console.error("Video generation timed out");
+	return null;
+}
 
 export default OpenAI;

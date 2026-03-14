@@ -1,5 +1,5 @@
 import { getProviderById } from "@/server/ai/provider";
-import type { TypixChatApiResponse } from "@/server/ai/types/api";
+import type { TypixChatApiResponse, TypixVideoApiResponse } from "@/server/ai/types/api";
 import { ConfigInvalidError } from "@/server/ai/types/provider";
 import { ServiceException } from "@/server/lib/exception";
 import {
@@ -75,6 +75,39 @@ const app = new Hono<Env>()
 			} catch (error) {
 				if (error instanceof ConfigInvalidError) {
 					return c.json(ok({ errorReason: "CONFIG_INVALID", images: [] } as TypixChatApiResponse));
+				}
+				throw error;
+			}
+		},
+	)
+	.post(
+		"/no-auth/:providerId/video/generate",
+		zValidator(
+			"json",
+			z.object({
+				request: z.any(),
+				settings: z.any(),
+			}),
+		),
+		async (c) => {
+			const req = c.req.valid("json");
+			const providerId = c.req.param("providerId");
+
+			const aiProviderInstance = getProviderById(providerId);
+			if (!aiProviderInstance) {
+				throw new ServiceException("not_found", "AI provider not found in system");
+			}
+
+			if (!aiProviderInstance.generateVideo) {
+				throw new ServiceException("not_supported", "Video generation is not supported by this provider");
+			}
+
+			try {
+				const response = await aiProviderInstance.generateVideo(req.request, req.settings);
+				return c.json(ok(response));
+			} catch (error) {
+				if (error instanceof ConfigInvalidError) {
+					return c.json(ok({ errorReason: "CONFIG_INVALID" } as TypixVideoApiResponse));
 				}
 				throw error;
 			}

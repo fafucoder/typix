@@ -8,7 +8,9 @@ import {
   type ProviderSettingsType,
   doParseSettings,
 } from "../types/provider";
+import type { TypixVideoGenerateRequest, TypixVideoApiResponse } from "../types/api";
 
+const defaultBaseURL = "https://open.bigmodel.cn/api/paas/v4";
 const glmSettingsSchema = [
   {
     key: "apiKey",
@@ -19,7 +21,7 @@ const glmSettingsSchema = [
     key: "baseURL",
     type: "url",
     required: false,
-    defaultValue: "https://open.bigmodel.cn/api/paas/v4",
+    defaultValue: defaultBaseURL,
   },
 ] as const satisfies ApiProviderSettingsItem[];
 
@@ -119,6 +121,139 @@ const Glm: AiProvider = {
       throw error;
     }
   },
+
+  generateVideo: async (request: TypixVideoGenerateRequest, settings: ApiProviderSettings): Promise<TypixVideoApiResponse> => {
+    const { baseURL, apiKey } = 
+      Glm.parseSettings<GlmSettings>(settings);
+    const model = request.modelId || "cogvideox-3";
+
+    try {
+      // Prepare request body for video generation
+      const requestBody: Record<string, unknown> = {
+        model,
+        prompt: request.prompt,
+        quality: "quality", // 质量优先
+        with_audio: true, // 包含音频
+        size: "1920x1080", // 1080P 分辨率
+        fps: 30, // 30 帧率
+      };
+
+      // Create video generation task
+      const response = await fetch(`${baseURL}/videos/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as Record<string, unknown>;
+        if (response.status === 401 || response.status === 404) {
+          return {
+            errorReason: "CONFIG_ERROR",
+          };
+        }
+        if (response.status === 429) {
+          return {
+            errorReason: "TOO_MANY_REQUESTS",
+          };
+        }
+        if (response.status === 400) {
+          return {
+            errorReason: "API_ERROR",
+          };
+        }
+        throw new Error((errorData.message as string) || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json() as Record<string, unknown>;
+
+      // Check if task was created successfully
+      if (data.id) {
+        const taskId = data.id as string;
+        
+        // Poll for task completion
+        const videoUrl = await pollVideoTask(taskId, apiKey, baseURL || defaultBaseURL);
+        
+        if (videoUrl) {
+          return {
+            videoUrl,
+            status: "completed",
+          };
+        }
+        
+        return {
+          errorReason: "UNKNOWN",
+        };
+      }
+
+      return {
+        errorReason: "UNKNOWN",
+      };
+    } catch (error) {
+      console.error("GLM video generation error:", error);
+      return {
+        errorReason: "UNKNOWN",
+      };
+    }
+  },
 };
+
+async function pollVideoTask(taskId: string, apiKey: string, baseURL: string): Promise<string | null> {
+  const maxAttempts = 120; // 30 minutes with 15 second intervals
+  const interval = 15000; // 15 seconds
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const response = await fetch(`${baseURL}/videos/retrieve`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ id: taskId }),
+      });
+
+      if (!response.ok) {
+        console.error(`Failed to poll task status: ${response.status}`);
+        // Continue polling
+        await new Promise(resolve => setTimeout(resolve, interval));
+        continue;
+      }
+
+      const data = await response.json() as Record<string, unknown>;
+      const status = data.status as string;
+      
+      if (status === "succeeded" && data.data) {
+        const videoData = data.data as Record<string, unknown>;
+        return videoData.url as string | null;
+      }
+      
+      if (status === "failed") {
+        console.error("Video generation failed:", data.error);
+        return null;
+      }
+      
+      // Continue polling for pending or running status
+      if (status === "pending" || status === "running") {
+        await new Promise(resolve => setTimeout(resolve, interval));
+        continue;
+      }
+      
+      // Unknown status
+      console.error("Unknown task status:", status);
+      return null;
+    } catch (error) {
+      console.error("Error polling task status:", error);
+      // Continue polling
+      await new Promise(resolve => setTimeout(resolve, interval));
+    }
+  }
+
+  console.error("Video generation timed out");
+  return null;
+}
 
 export default Glm;

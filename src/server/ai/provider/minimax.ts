@@ -8,7 +8,9 @@ import {
   type ProviderSettingsType,
   doParseSettings,
 } from "../types/provider";
+import type { TypixVideoGenerateRequest, TypixVideoApiResponse } from "../types/api";
 
+const defaultBaseURL = "https://api.minimaxi.chat/v1";
 const minimaxSettingsSchema = [
   {
     key: "apiKey",
@@ -19,7 +21,7 @@ const minimaxSettingsSchema = [
     key: "baseURL",
     type: "url",
     required: false,
-    defaultValue: "https://api.minimaxi.chat/v1",
+    defaultValue: defaultBaseURL,
   },
 ] as const satisfies ApiProviderSettingsItem[];
 
@@ -119,6 +121,159 @@ const Minimax: AiProvider = {
       throw error;
     }
   },
+
+  generateVideo: async (request: TypixVideoGenerateRequest, settings: ApiProviderSettings): Promise<TypixVideoApiResponse> => {
+    const { baseURL, apiKey } = 
+      Minimax.parseSettings<MinimaxSettings>(settings);
+    const model = request.modelId || "MiniMax-Hailuo-2.3";
+
+    try {
+      // Prepare request body for video generation
+      const requestBody: Record<string, unknown> = {
+        model,
+        prompt: request.prompt,
+        duration: request.duration || 6,
+        resolution: "1080P",
+      };
+
+      // Create video generation task
+      const response = await fetch(`${baseURL}/video_generation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as Record<string, unknown>;
+        if (response.status === 401 || response.status === 404) {
+          return {
+            errorReason: "CONFIG_ERROR",
+          };
+        }
+        if (response.status === 429) {
+          return {
+            errorReason: "TOO_MANY_REQUESTS",
+          };
+        }
+        if (response.status === 400) {
+          return {
+            errorReason: "API_ERROR",
+          };
+        }
+        throw new Error((errorData.message as string) || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json() as Record<string, unknown>;
+
+      // Check if task was created successfully
+      if (data.task_id) {
+        const taskId = data.task_id as string;
+        
+        // Poll for task completion
+        const videoUrl = await pollVideoTask(taskId, apiKey, baseURL||defaultBaseURL);
+        
+        if (videoUrl) {
+          return {
+            videoUrl,
+            status: "completed",
+          };
+        }
+        
+        return {
+          errorReason: "UNKNOWN",
+        };
+      }
+
+      return {
+        errorReason: "UNKNOWN",
+      };
+    } catch (error) {
+      console.error("MiniMax video generation error:", error);
+      return {
+        errorReason: "UNKNOWN",
+      };
+    }
+  },
 };
+
+async function pollVideoTask(taskId: string, apiKey: string, baseURL: string): Promise<string | null> {
+  const maxAttempts = 120; // 30 minutes with 15 second intervals
+  const interval = 15000; // 15 seconds
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const response = await fetch(`${baseURL}/video_generation/tasks/${taskId}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error(`Failed to poll task status: ${response.status}`);
+        // Continue polling
+        await new Promise(resolve => setTimeout(resolve, interval));
+        continue;
+      }
+
+      const data = await response.json() as Record<string, unknown>;
+      const status = data.status as string;
+      const fileId = data.file_id as string | undefined;
+      
+      if (status === "succeeded" && fileId) {
+        // Get video URL using file_id
+        const videoUrl = await getVideoUrl(fileId, apiKey, baseURL);
+        return videoUrl;
+      }
+      
+      if (status === "failed") {
+        console.error("Video generation failed:", data.message);
+        return null;
+      }
+      
+      // Continue polling for pending or running status
+      if (status === "pending" || status === "running") {
+        await new Promise(resolve => setTimeout(resolve, interval));
+        continue;
+      }
+      
+      // Unknown status
+      console.error("Unknown task status:", status);
+      return null;
+    } catch (error) {
+      console.error("Error polling task status:", error);
+      // Continue polling
+      await new Promise(resolve => setTimeout(resolve, interval));
+    }
+  }
+
+  console.error("Video generation timed out");
+  return null;
+}
+
+async function getVideoUrl(fileId: string, apiKey: string, baseURL: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${baseURL}/files/${fileId}/download_url`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to get video URL: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json() as Record<string, unknown>;
+    return data.url as string | null;
+  } catch (error) {
+    console.error("Error getting video URL:", error);
+    return null;
+  }
+}
 
 export default Minimax;

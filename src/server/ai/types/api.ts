@@ -14,6 +14,10 @@ export const commonAspectRatioSizes: Record<AspectRatio, { width: number; height
 	"3:4": { width: 1200, height: 1600 },
 };
 
+// Video duration options
+export const videoDurations = [5, 10] as const;
+export type VideoDuration = (typeof videoDurations)[number];
+
 export const TypixGenerateRequestSchema = z.object({
 	providerId: z.string(),
 	modelId: z.string(),
@@ -30,4 +34,25 @@ export type TypixGenerateRequest = z.infer<typeof TypixGenerateRequestSchema> & 
 export type TypixChatApiResponse = {
 	errorReason?: ErrorReason; // Optional error reason if generation failed
 	images: string[]; // Array of generated image base64 Data URI
+};
+
+// Video generation request schema
+export const TypixVideoGenerateRequestSchema = z.object({
+	providerId: z.string(),
+	modelId: z.string(),
+	prompt: z.string(),
+	images: z.array(z.string()).optional(), // Optional images for image-to-video generation
+	duration: z.number().int().min(5).max(10).optional(), // Video duration in seconds
+	aspectRatio: z.enum(aspectRatios).optional(), // Optional aspect ratio
+});
+
+export type TypixVideoGenerateRequest = z.infer<typeof TypixVideoGenerateRequestSchema> & {
+	model: AiModel; // AI model information
+};
+
+export type TypixVideoApiResponse = {
+	errorReason?: ErrorReason; // Optional error reason if generation failed
+	videoUrl?: string; // URL to the generated video
+	videoBase64?: string; // Base64 encoded video data
+	status?: "pending" | "generating" | "completed" | "failed"; // Generation status
 };

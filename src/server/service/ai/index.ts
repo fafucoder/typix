@@ -41,6 +41,7 @@ interface DbAiModel {
 	type: "text2image" | "text2video";
 	enabled: number;
 	maxInputImages: number | null;
+	videoDurations: string | null;
 	sort: number;
 	createdAt: Date;
 	updatedAt: Date;
@@ -51,6 +52,7 @@ interface DbAiModel {
 // Convert database model to service model format
 const dbModelToServiceModel = (dbModel: DbAiModel): AiModel => {
 	let supportedAspectRatios: AspectRatio[] = ["1:1", "16:9", "9:16", "4:3", "3:4"];
+	let videoDurations: number[] | undefined = undefined;
 	
 	// Parse supportedAspectRatios from JSON if available
 	if (dbModel.supportedAspectRatios) {
@@ -66,11 +68,26 @@ const dbModelToServiceModel = (dbModel: DbAiModel): AiModel => {
 		}
 	}
 	
+	// Parse videoDurations from JSON if available
+	if (dbModel.videoDurations) {
+		try {
+			const parsed = typeof dbModel.videoDurations === 'string'
+				? JSON.parse(dbModel.videoDurations)
+				: dbModel.videoDurations;
+			if (Array.isArray(parsed) && parsed.length > 0) {
+				videoDurations = parsed as number[];
+			}
+		} catch (error) {
+			console.error('Failed to parse videoDurations:', error);
+		}
+	}
+	
 	return {
 		id: dbModel.modelId,
 		name: dbModel.name || dbModel.modelId,
 		ability: dbModel.ability as Ability,
 		maxInputImages: dbModel.maxInputImages ?? 1,
+		videoDurations,
 		enabled: dbModel.enabled === 1,
 		supportedAspectRatios,
 	};
@@ -154,196 +171,97 @@ const getEnabledAiProvidersWithModels = async (req: GetEnabledAiProvidersWithMod
 	return providers;
 };
 
-export const GetAiProviderByIdSchema = z.object({
-	providerId: z.string(),
+export const CreateAiProviderSchema = createInsertSchema(aiProviders).omit({
+	id: true,
+	createdAt: true,
+	updatedAt: true,
 });
-export type GetAiProviderById = z.infer<typeof GetAiProviderByIdSchema>;
+export type CreateAiProvider = z.infer<typeof CreateAiProviderSchema>;
 
-const getAiProviderById = async (req: GetAiProviderById, _ctx: RequestContext) => {
+const createAiProvider = async (req: CreateAiProvider, _ctx: RequestContext) => {
 	const { db } = getContext();
-
-	// Get provider from database
-	const dbProvider = await db.query.aiProviders.findFirst({
-		where: eq(aiProviders.providerId, req.providerId),
-	});
-
-	if (!dbProvider) {
-		throw new ServiceException("not_found", "AI provider not found in database");
-	}
-
-	// Get models for this provider sorted by sort field
-	const dbModels = await db.query.aiModels.findMany({
-		where: eq(aiModels.providerId, dbProvider.id),
-		orderBy: (aiModels, { desc }) => [desc(aiModels.sort)],
-	});
-	const serviceModels = dbModels.map(dbModel => dbModelToServiceModel(dbModel));
-
-	return dbProviderToServiceProvider(dbProvider, serviceModels);
+	const result = await db.insert(aiProviders).values(req).returning();
+	return result[0];
 };
 
-export const GetAiProviderWithDbDataSchema = z.object({
-	providerId: z.string(),
-});
-export type GetAiProviderWithDbData = z.infer<typeof GetAiProviderWithDbDataSchema>;
-
-const getAiProviderWithDbData = async (req: GetAiProviderWithDbData, _ctx: RequestContext) => {
-	const { db } = getContext();
-
-	// Get provider from database
-	const dbProvider = await db.query.aiProviders.findFirst({
-		where: eq(aiProviders.providerId, req.providerId),
-	});
-
-	if (!dbProvider) {
-		throw new ServiceException("not_found", "AI provider not found in database");
-	}
-
-	// Get models for this provider sorted by sort field
-	const dbModels = await db.query.aiModels.findMany({
-		where: eq(aiModels.providerId, dbProvider.id),
-		orderBy: (aiModels, { desc }) => [desc(aiModels.sort)],
-	});
-
-	return { dbProvider, dbModels };
-};
-
-export const GetAiProviderAndModelByIdSchema = z.object({
-	providerId: z.string(),
-	modelId: z.string(),
-});
-export type GetAiProviderAndModelById = z.infer<typeof GetAiProviderAndModelByIdSchema>;
-
-const getAiProviderAndModelById = async (req: GetAiProviderAndModelById, _ctx: RequestContext) => {
-	const { db } = getContext();
-
-	// Get provider from database
-	const dbProvider = await db.query.aiProviders.findFirst({
-		where: eq(aiProviders.providerId, req.providerId),
-	});
-
-	if (!dbProvider) {
-		throw new ServiceException("not_found", "AI provider not found in database");
-	}
-
-	// Get specific model for this provider
-	const dbModel = await db.query.aiModels.findFirst({
-		where: and(
-			eq(aiModels.providerId, dbProvider.id),
-			eq(aiModels.modelId, req.modelId)
-		),
-	});
-
-	return { dbProvider, dbModel };
-};
-
-export const UpdateAiProviderSchema = createUpdateSchema(aiProviders).pick({
-	providerId: true,
-	enabled: true,
-	settings: true,
+export const UpdateAiProviderSchema = createUpdateSchema(aiProviders).omit({
+	id: true,
+	createdAt: true,
 });
 export type UpdateAiProvider = z.infer<typeof UpdateAiProviderSchema>;
 
-const updateAiProvider = async (req: UpdateAiProvider, _ctx: RequestContext) => {
+const updateAiProvider = async (id: string, req: UpdateAiProvider, _ctx: RequestContext) => {
 	const { db } = getContext();
-
-	if (!req.providerId) {
-		throw new ServiceException("invalid_parameter", "Provider ID is required");
-	}
-
-	// Get existing provider from database
-	const existingProvider = await db.query.aiProviders.findFirst({
-		where: eq(aiProviders.providerId, req.providerId),
-	});
-
-	if (!existingProvider) {
-		throw new ServiceException("not_found", "AI provider not found in database");
-	}
-
-	// Update provider in database
-	await db
-		.update(aiProviders)
-		.set({
-			enabled: req.enabled,
-			settings: req.settings ? JSON.stringify(req.settings) : null,
-			updatedAt: new Date(),
-		})
-		.where(eq(aiProviders.id, existingProvider.id));
+	const result = await db.update(aiProviders).set({ ...req, updatedAt: new Date() }).where(eq(aiProviders.id, id)).returning();
+	return result[0];
 };
 
-export const GetAiModelsByProviderIdSchema = z.object({
-	providerId: z.string(),
+export const DeleteAiProviderSchema = z.object({
+	id: z.string(),
 });
-export type GetAiModelsByProviderId = z.infer<typeof GetAiModelsByProviderIdSchema>;
+export type DeleteAiProvider = z.infer<typeof DeleteAiProviderSchema>;
 
-const getAiModelsByProviderId = async (req: GetAiModelsByProviderId, _ctx: RequestContext) => {
+const deleteAiProvider = async (req: DeleteAiProvider, _ctx: RequestContext) => {
 	const { db } = getContext();
-
-	// Get provider from database
-	const dbProvider = await db.query.aiProviders.findFirst({
-		where: eq(aiProviders.providerId, req.providerId),
-	});
-
-	if (!dbProvider) {
-		throw new ServiceException("not_found", "AI provider not found in database");
-	}
-
-	// Get models from database sorted by sort field
-	const dbModels = await db.query.aiModels.findMany({
-		where: eq(aiModels.providerId, dbProvider.id),
-		orderBy: (aiModels, { desc }) => [desc(aiModels.sort)],
-	});
-
-	return dbModels.map(dbModel => dbModelToServiceModel(dbModel, dbProvider.providerId));
+	await db.delete(aiProviders).where(eq(aiProviders.id, req.id));
 };
 
-export const UpdateAiModelSchema = createInsertSchema(aiModels).pick({
-	providerId: true,
-	modelId: true,
-	enabled: true,
+export const CreateAiModelSchema = createInsertSchema(aiModels).omit({
+	id: true,
+	createdAt: true,
+	updatedAt: true,
+});
+export type CreateAiModel = z.infer<typeof CreateAiModelSchema>;
+
+const createAiModel = async (req: CreateAiModel, _ctx: RequestContext) => {
+	const { db } = getContext();
+	const result = await db.insert(aiModels).values(req).returning();
+	return result[0];
+};
+
+export const UpdateAiModelSchema = createUpdateSchema(aiModels).omit({
+	id: true,
+	createdAt: true,
 });
 export type UpdateAiModel = z.infer<typeof UpdateAiModelSchema>;
 
-const updateAiModel = async (req: UpdateAiModel, _ctx: RequestContext) => {
+const updateAiModel = async (id: string, req: UpdateAiModel, _ctx: RequestContext) => {
 	const { db } = getContext();
-
-	// Get provider from database
-	const dbProvider = await db.query.aiProviders.findFirst({
-		where: eq(aiProviders.providerId, req.providerId),
-	});
-
-	if (!dbProvider) {
-		throw new ServiceException("not_found", "AI provider not found in database");
-	}
-
-	// Get existing model from database
-	const existingModel = await db.query.aiModels.findFirst({
-		where: and(
-			eq(aiModels.providerId, dbProvider.id),
-			eq(aiModels.modelId, req.modelId),
-		),
-	});
-
-	if (!existingModel) {
-		throw new ServiceException("not_found", "AI model not found in database");
-	}
-
-	// Update model in database
-	await db
-		.update(aiModels)
-		.set({
-			enabled: req.enabled,
-			updatedAt: new Date(),
-		})
-		.where(eq(aiModels.id, existingModel.id));
+	const result = await db.update(aiModels).set({ ...req, updatedAt: new Date() }).where(eq(aiModels.id, id)).returning();
+	return result[0];
 };
 
-export const aiService = {
-	getAiProviders,
-	getEnabledAiProvidersWithModels,
-	getAiProviderById,
-	getAiProviderWithDbData,
-	getAiProviderAndModelById,
-	updateAiProvider,
-	getAiModelsByProviderId,
-	updateAiModel,
+export const DeleteAiModelSchema = z.object({
+	id: z.string(),
+});
+export type DeleteAiModel = z.infer<typeof DeleteAiModelSchema>;
+
+const deleteAiModel = async (req: DeleteAiModel, _ctx: RequestContext) => {
+	const { db } = getContext();
+	await db.delete(aiModels).where(eq(aiModels.id, req.id));
 };
+
+export const BatchUpdateAiModelsEnabledSchema = z.object({
+	ids: z.array(z.string()),
+	enabled: z.number().int().min(0).max(1),
+});
+export type BatchUpdateAiModelsEnabled = z.infer<typeof BatchUpdateAiModelsEnabledSchema>;
+
+const batchUpdateAiModelsEnabled = async (req: BatchUpdateAiModelsEnabled, _ctx: RequestContext) => {
+	const { db } = getContext();
+	await db.update(aiModels).set({ enabled: req.enabled }).where(inArray(aiModels.id, req.ids));
+};
+
+class AiService {
+	getAiProviders = getAiProviders;
+	getEnabledAiProvidersWithModels = getEnabledAiProvidersWithModels;
+	createAiProvider = createAiProvider;
+	updateAiProvider = updateAiProvider;
+	deleteAiProvider = deleteAiProvider;
+	createAiModel = createAiModel;
+	updateAiModel = updateAiModel;
+	deleteAiModel = deleteAiModel;
+	batchUpdateAiModelsEnabled = batchUpdateAiModelsEnabled;
+}
+
+export const aiService = new AiService();
