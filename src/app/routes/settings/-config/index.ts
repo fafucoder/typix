@@ -1,4 +1,4 @@
-import { Key, Settings2, User, CreditCard } from "lucide-react";
+import { Key, Settings2, User, CreditCard, BarChart3 } from "lucide-react";
 import type { SettingsSection } from "../-components/SettingsNavigation";
 
 /**
@@ -30,6 +30,12 @@ export const settingsSections: SettingsSection[] = [
 		title: "settings.sections.billing", // i18n key
 		icon: CreditCard,
 		path: "/settings/orders",
+	},
+	{
+		id: "usage",
+		title: "settings.sections.usage", // i18n key
+		icon: BarChart3,
+		path: "/settings/usage",
 	},
 ];
 

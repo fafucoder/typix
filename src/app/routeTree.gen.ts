@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as VideoIndexRouteImport } from './routes/video/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ChatIndexRouteImport } from './routes/chat/index'
+import { Route as SettingsUsageRouteImport } from './routes/settings/usage'
 import { Route as SettingsSubscriptionRouteImport } from './routes/settings/subscription'
 import { Route as SettingsOrdersRouteImport } from './routes/settings/orders'
 import { Route as SettingsCommonRouteImport } from './routes/settings/common'
@@ -44,6 +45,11 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
   id: '/chat/',
   path: '/chat/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsUsageRoute = SettingsUsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
+  getParentRoute: () => SettingsRouteRoute,
 } as any)
 const SettingsSubscriptionRoute = SettingsSubscriptionRouteImport.update({
   id: '/subscription',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/settings/common': typeof SettingsCommonRoute
   '/settings/orders': typeof SettingsOrdersRoute
   '/settings/subscription': typeof SettingsSubscriptionRouteWithChildren
+  '/settings/usage': typeof SettingsUsageRoute
   '/chat/': typeof ChatIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/video/': typeof VideoIndexRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/settings/common': typeof SettingsCommonRoute
   '/settings/orders': typeof SettingsOrdersRoute
   '/settings/subscription': typeof SettingsSubscriptionRouteWithChildren
+  '/settings/usage': typeof SettingsUsageRoute
   '/chat': typeof ChatIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/video': typeof VideoIndexRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/settings/common': typeof SettingsCommonRoute
   '/settings/orders': typeof SettingsOrdersRoute
   '/settings/subscription': typeof SettingsSubscriptionRouteWithChildren
+  '/settings/usage': typeof SettingsUsageRoute
   '/chat/': typeof ChatIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/video/': typeof VideoIndexRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/settings/common'
     | '/settings/orders'
     | '/settings/subscription'
+    | '/settings/usage'
     | '/chat/'
     | '/settings/'
     | '/video/'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/settings/common'
     | '/settings/orders'
     | '/settings/subscription'
+    | '/settings/usage'
     | '/chat'
     | '/settings'
     | '/video'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/settings/common'
     | '/settings/orders'
     | '/settings/subscription'
+    | '/settings/usage'
     | '/chat/'
     | '/settings/'
     | '/video/'
@@ -189,6 +201,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/chat/'
       preLoaderRoute: typeof ChatIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/settings/usage': {
+      id: '/settings/usage'
+      path: '/usage'
+      fullPath: '/settings/usage'
+      preLoaderRoute: typeof SettingsUsageRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
     '/settings/subscription': {
       id: '/settings/subscription'
@@ -244,6 +263,7 @@ interface SettingsRouteRouteChildren {
   SettingsCommonRoute: typeof SettingsCommonRoute
   SettingsOrdersRoute: typeof SettingsOrdersRoute
   SettingsSubscriptionRoute: typeof SettingsSubscriptionRouteWithChildren
+  SettingsUsageRoute: typeof SettingsUsageRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
@@ -252,6 +272,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsCommonRoute: SettingsCommonRoute,
   SettingsOrdersRoute: SettingsOrdersRoute,
   SettingsSubscriptionRoute: SettingsSubscriptionRouteWithChildren,
+  SettingsUsageRoute: SettingsUsageRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
 

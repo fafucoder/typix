@@ -3,6 +3,7 @@ import { getContext } from "../context";
 import { modelUsageStats, modelUsageDetails } from "../../db/schemas/usage";
 import { order } from "../../db/schemas/order";
 import { subscribeModel } from "../../db/schemas/subscribe";
+import { aiModels } from "../../db/schemas/ai";
 import { customAlphabet } from "nanoid/non-secure";
 
 const generateId = () => customAlphabet("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 16)();
@@ -196,20 +197,75 @@ export class UsageService {
 		const { db } = getContext();
 
 		try {
-			const conditions: any[] = [eq(modelUsageStats.userId, userId)];
-			if (orderId) {
-				conditions.push(eq(modelUsageStats.orderId, orderId));
+			const activeOrder = await this.getUserActiveOrder(userId);
+			
+			if (!activeOrder) {
+				return [];
 			}
 
-			const stats = await db.query.modelUsageStats.findMany({
+			// 使用 innerJoin 确保只返回存在的模型（与 /api/subscribes/current 保持一致）
+			const modelConfigs = await db
+				.select({
+					subscribeModel: {
+						id: subscribeModel.id,
+						modelId: subscribeModel.modelId,
+						maxUsage: subscribeModel.maxUsage,
+						sortOrder: subscribeModel.sortOrder,
+					},
+					model: {
+						id: aiModels.id,
+						modelId: aiModels.modelId,
+						name: aiModels.name,
+						type: aiModels.type,
+					}
+				})
+				.from(subscribeModel)
+				.innerJoin(aiModels, eq(subscribeModel.modelId, aiModels.id))
+				.where(
+					and(
+						eq(subscribeModel.subscribeId, activeOrder.subscribeId),
+						eq(subscribeModel.enabled, 1)
+					)
+				)
+				.orderBy(desc(subscribeModel.sortOrder));
+
+			const conditions: any[] = [
+				eq(modelUsageStats.userId, userId),
+				eq(modelUsageStats.orderId, activeOrder.id)
+			];
+
+			const usageStats = await db.query.modelUsageStats.findMany({
 				where: and(...conditions),
 				with: {
 					model: true,
 				},
-				orderBy: (stats, { desc }) => [desc(stats.updatedAt)],
 			});
 
-			return stats;
+			const usageMap = new Map(
+				usageStats.map((stat) => [stat.modelId, stat])
+			);
+
+			const now = new Date();
+			const result = modelConfigs.map((config) => {
+				const usage = usageMap.get(config.subscribeModel.modelId);
+				const usageCount = usage?.usageCount || 0;
+				const maxUsage = config.subscribeModel.maxUsage || 0;
+				const remainingUsage = maxUsage > 0 ? Math.max(0, maxUsage - usageCount) : 0;
+
+				return {
+					id: usage?.id || `${userId}-${activeOrder.id}-${config.subscribeModel.modelId}`,
+					userId,
+					orderId: activeOrder.id,
+					modelId: config.subscribeModel.modelId,
+					usageCount,
+					maxUsage,
+					remainingUsage,
+					createdAt: usage?.createdAt || now,
+					updatedAt: usage?.updatedAt || now,
+					model: config.model,
+				};
+			});
+			return result;
 		} catch (error) {
 			console.error("[UsageService] Error getting user usage stats:", error);
 			throw error;
@@ -262,7 +318,8 @@ export class UsageService {
 			const activeOrder = await db.query.order.findFirst({
 				where: and(
 					eq(order.userId, userId),
-					eq(order.status, "paid")
+					eq(order.status, "paid"),
+					eq(order.type, "subscription")
 				),
 				orderBy: (o, { desc }) => [desc(o.createdAt)],
 				with: {

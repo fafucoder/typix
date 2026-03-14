@@ -18,6 +18,7 @@ import subscribeRouter from "./routes/subscribe";
 import orderRouter from "./routes/order";
 import paymentRouter from "./routes/payment";
 import { couponRoutes } from "./routes/coupon";
+import usageRouter from "./routes/usage";
 import type { ApiResult, Env } from "./util";
 
 const factory = createFactory<Env>({
@@ -164,6 +165,7 @@ const route = app
 	.route("/", orderRouter)
 	.route("/", paymentRouter)
 	.route("/", couponRoutes)
+	.route("/", usageRouter)
 
 setupOrderExpirationListener();
 

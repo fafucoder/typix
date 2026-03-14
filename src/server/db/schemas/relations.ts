@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
 import { order } from "./order";
-import { subscribe } from "./subscribe";
+import { subscribe, subscribeModel } from "./subscribe";
 import { payment } from "./payment";
 import { userCoupon } from "./user-coupon";
 import { user } from "./auth";
@@ -23,6 +23,18 @@ export const orderRelations = relations(order, ({ one, many }) => ({
 
 export const subscribeRelations = relations(subscribe, ({ many }) => ({
 	orders: many(order),
+	models: many(subscribeModel),
+}));
+
+export const subscribeModelRelations = relations(subscribeModel, ({ one }) => ({
+	subscribe: one(subscribe, {
+		fields: [subscribeModel.subscribeId],
+		references: [subscribe.id],
+	}),
+	model: one(aiModels, {
+		fields: [subscribeModel.modelId],
+		references: [aiModels.id],
+	}),
 }));
 
 export const paymentRelations = relations(payment, ({ one }) => ({

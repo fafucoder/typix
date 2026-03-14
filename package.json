@@ -77,6 +77,8 @@
 		"drizzle-orm": "^0.43.1",
 		"drizzle-orm-crsqlite-wasm": "^0.0.7",
 		"drizzle-zod": "^0.8.2",
+		"echarts": "^6.0.0",
+		"echarts-for-react": "^3.0.6",
 		"hono": "^4.7.10",
 		"i18next": "^25.2.1",
 		"i18next-browser-languagedetector": "^8.1.0",
