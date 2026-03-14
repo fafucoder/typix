@@ -8,6 +8,8 @@ import { eq } from "drizzle-orm";
 import { APIError } from "better-auth/api";
 
 export interface AuthConfig {
+	baseURL?: string;
+	cookieDomain?: string;
 	email: {
 		verification: boolean;
 		resend: {
@@ -27,7 +29,6 @@ export interface AuthConfig {
 			clientSecret: string;
 		};
 	};
-	cookieDomain?: string;
 }
 
 function generateInviteCode(): string {
@@ -84,6 +85,7 @@ export const verifyPassword = async (hash: string, password: string): Promise<bo
 
 export const createAuth = (db: any, config?: AuthConfig) =>
 	betterAuth({
+		baseURL: config?.baseURL,
 		database: drizzleAdapter(db, {
 			provider: "mysql",
 			schema: {

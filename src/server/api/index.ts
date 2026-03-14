@@ -24,8 +24,16 @@ const factory = createFactory<Env>({
 	initApp: async (app) => {
 		app.use(async (c, next) => {
 			const db = await createDb(c.env.DB);
+
+			// 从请求头自动检测 baseURL
+			const detectedBaseURL = c.req.header("x-forwarded-host")
+				? `${c.req.header("x-forwarded-proto") || "http"}://${c.req.header("x-forwarded-host")}`
+				: c.req.url ? `${new URL(c.req.url).protocol}//${new URL(c.req.url).host}` : undefined;
+
 			// env(c) are both compatible with Cloudflare Workers(wrangler.toml) and Node.js(.env)
 			const authConfig: AuthConfig = {
+				baseURL: env(c).BETTER_AUTH_URL ? String(env(c).BETTER_AUTH_URL) :detectedBaseURL,
+				cookieDomain: env(c).COOKIE_DOMAIN ? String(env(c).COOKIE_DOMAIN) : undefined,
 				email: {
 					verification: env(c).AUTH_EMAIL_VERIFICATION_ENABLED === "true",
 					resend: {
@@ -45,7 +53,6 @@ const factory = createFactory<Env>({
 						clientSecret: env(c).AUTH_SOCIAL_GITHUB_CLIENT_SECRET || "",
 					},
 				},
-				cookieDomain: env(c).COOKIE_DOMAIN ? String(env(c).COOKIE_DOMAIN) : undefined,
 			};
 
 			c.set("db", db);
