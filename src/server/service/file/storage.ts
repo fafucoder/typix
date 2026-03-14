@@ -3,99 +3,394 @@ import { inBrowser } from "@/server/lib/env";
 import { base64ToDataURI, fetchUrlToDataURI } from "@/server/lib/util";
 import { and, eq } from "drizzle-orm";
 import { getContext } from "../context";
+import { customAlphabet } from "nanoid/non-secure";
 
-interface FileStorageLocalConfig {
-	path: string;
+// Generate unique ID for files
+const generateId = customAlphabet("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 16);
+
+// File Storage Interface - All storage types must implement this
+export interface FileStorageProvider {
+	/**
+	 * Storage type identifier
+	 */
+	readonly type: Storage;
+
+	/**
+	 * Save a file to storage
+	 * @param fileData Base64 encoded file data
+	 * @param userId User ID who owns the file
+	 * @returns Promise resolving to stored file reference (URL, path, or identifier)
+	 */
+	save(fileData: string, userId: string): Promise<string>;
+
+	/**
+	 * Get a file URL or path from storage
+	 * @param file File record from database
+	 * @param userId User ID to check access
+	 * @returns Promise resolving to URL or path to the file, or null if not found
+	 */
+	get(file: typeof files.$inferSelect, userId: string): Promise<string | null>;
+
+	/**
+	 * Get file data as base64 data URL
+	 * @param file File record from database
+	 * @param userId User ID to check access
+	 * @returns Promise resolving to base64 data URL, or null if not found
+	 */
+	getData?(file: typeof files.$inferSelect, userId: string): Promise<string | null>;
 }
-interface FileStorageR2Config {
-	bucket: string;
-	accessKeyId: string;
-	secretAccessKey: string;
-	endpoint?: string;
-}
 
-export const fileStorage = inBrowser ? "base64" : (process.env.FILE_STORAGE as Storage) || "base64";
+// Base64 Storage Provider - Stores data directly in database
+class Base64StorageProvider implements FileStorageProvider {
+	readonly type = "base64" as const;
 
-// const fileStorageConfig: Record<Storage, FileStorageLocalConfig | FileStorageR2Config | undefined> | undefined =
-// 	inBrowser
-// 		? undefined
-// 		: {
-// 				base64: undefined,
-// 				disk: {
-// 					path: process.env.FILE_STORAGE_DISK_PATH,
-// 				},
-// 				/* r2: {
-// 					bucket: process.env.FILE_STORAGE_R2_BUCKET || "",
-// 					accessKeyId: process.env.FILE_STORAGE_R2_ACCESS_KEY_ID || "",
-// 					secretAccessKey: process.env.FILE_STORAGE_R2_SECRET_ACCESS_KEY || "",
-// 					endpoint: process.env.FILE_STORAGE_R2_ENDPOINT,
-// 				}, */
-// 			};
-
-const storageHandlers: Record<
-	Storage,
-	{
-		/**
-		 * Save a file to the storage
-		 * @param fileData Base64 encoded file data
-		 * @param userId
-		 * @returns
-		 */
-		save: (fileData: string, userId: string) => Promise<string>;
-		/**
-		 * Get a file URL or path from the storage
-		 * @param file File record from the database
-		 * @param userId User ID to check access
-		 * @returns URL or path to the file, or null if not found
-		 */
-		get: (file: typeof files.$inferSelect, userId: string) => Promise<string | null>;
+	async save(fileData: string, userId: string): Promise<string> {
+		// Store base64 data directly
+		return fileData;
 	}
-> = {
-	base64: {
-		save: async (fileData, userId) => {
+
+	async get(file: typeof files.$inferSelect, userId: string): Promise<string | null> {
+		return file.url;
+	}
+
+	async getData(file: typeof files.$inferSelect, userId: string): Promise<string | null> {
+		return file.url;
+	}
+}
+
+// Local Disk Storage Provider - Stores files on local filesystem
+class DiskStorageProvider implements FileStorageProvider {
+	readonly type = "disk" as const;
+	private basePath: string;
+	private fs: typeof import("node:fs") | null = null;
+	private path: typeof import("node:path") | null = null;
+	private initialized = false;
+
+	constructor(basePath: string) {
+		this.basePath = basePath;
+	}
+
+	private async initialize(): Promise<void> {
+		if (this.initialized || inBrowser) return;
+
+		this.fs = await import("node:fs");
+		this.path = await import("node:path");
+		this.initialized = true;
+
+		// Ensure that storage directory exists
+		if (!this.fs.existsSync(this.basePath)) {
+			this.fs.mkdirSync(this.basePath, { recursive: true });
+		}
+	}
+
+	async save(fileData: string, userId: string): Promise<string> {
+		if (inBrowser) {
+			// In browser, fall back to base64
 			return fileData;
-		},
-		get: async (file, userId) => {
+		}
+
+		await this.initialize();
+		if (!this.fs || !this.path) {
+			throw new Error("Node.js filesystem modules not available");
+		}
+
+		// Extract file extension from base64 data URL
+		const match = fileData.match(/^data:image\/(\w+);base64,/);
+		const extension = match ? match[1] : "png";
+
+		// Generate unique filename
+		const filename = `${generateId()}.${extension}`;
+		const filePath = this.path.join(this.basePath, filename);
+
+		// Extract base64 data without prefix
+		const base64Data = fileData.replace(/^data:image\/\w+;base64,/, "");
+		const buffer = Buffer.from(base64Data, "base64");
+
+		// Write file to disk
+		this.fs.writeFileSync(filePath, buffer);
+
+		// Return relative path to the file
+		return filename;
+	}
+
+	async get(file: typeof files.$inferSelect, userId: string): Promise<string | null> {
+		if (inBrowser) {
 			return file.url;
-		},
-	},
-	disk: {
-		save: async (fileData, userId) => {
-			return fileData;
-		},
-		get: async (file, userId) => {
-			return null;
-		},
-	},
-	/* 	r2: {
-		save: async (fileData, userId) => {
-			return fileData;
-		},
-		get: async (file, userId) => {
-			return null;
-		},
-	}, */
-};
+		}
 
-export const saveFiles = async (fileDatas: string[], userId: string) => {
+		await this.initialize();
+		if (!this.path) {
+			throw new Error("Node.js path module not available");
+		}
+
+		// Return full path to the file
+		return this.path.join(this.basePath, file.url);
+	}
+
+	async getData(file: typeof files.$inferSelect, userId: string): Promise<string | null> {
+		if (inBrowser) {
+			return null;
+		}
+
+		await this.initialize();
+		if (!this.fs) {
+			throw new Error("Node.js filesystem modules not available");
+		}
+
+		const fullPath = await this.get(file, userId);
+		if (!fullPath) return null;
+
+		try {
+			const fileSuffix = file.url.split(".").pop();
+			const data = await this.fs.promises.readFile(fullPath, "base64");
+			return base64ToDataURI(data, fileSuffix);
+		} catch {
+			return null;
+		}
+	}
+}
+
+// S3 Storage Provider - Stores files in S3-compatible object storage
+class S3StorageProvider implements FileStorageProvider {
+	readonly type = "s3" as const;
+	private config: {
+		bucket: string;
+		region: string;
+		accessKeyId: string;
+		secretAccessKey: string;
+		endpoint?: string;
+	};
+	private s3Client: any = null;
+	private initialized = false;
+	private sdkAvailable = false;
+	private S3Client: any = null;
+	private PutObjectCommand: any = null;
+	private GetObjectCommand: any = null;
+	private getSignedUrl: any = null;
+
+	constructor(config: {
+		bucket: string;
+		region: string;
+		accessKeyId: string;
+		secretAccessKey: string;
+		endpoint?: string;
+	}) {
+		this.config = config;
+	}
+
+	private async initialize(): Promise<void> {
+		if (this.initialized || inBrowser) return;
+
+		try {
+			// Dynamically import AWS SDK only when needed
+			const s3Module = await import("@aws-sdk/client-s3");
+			const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
+
+			this.S3Client = s3Module.S3Client;
+			this.PutObjectCommand = s3Module.PutObjectCommand;
+			this.GetObjectCommand = s3Module.GetObjectCommand;
+			this.getSignedUrl = getSignedUrl;
+
+			this.s3Client = new this.S3Client({
+				region: this.config.region,
+				credentials: {
+					accessKeyId: this.config.accessKeyId,
+					secretAccessKey: this.config.secretAccessKey,
+				},
+				...(this.config.endpoint && { endpoint: this.config.endpoint }),
+			});
+
+			this.sdkAvailable = true;
+			this.initialized = true;
+		} catch (error) {
+			console.warn("AWS SDK not available, S3 storage will be disabled:", error);
+			this.sdkAvailable = false;
+			this.initialized = true;
+		}
+	}
+
+	async save(fileData: string, userId: string): Promise<string> {
+		if (inBrowser) {
+			// In browser, fall back to base64
+			return fileData;
+		}
+
+		await this.initialize();
+		if (!this.sdkAvailable || !this.s3Client) {
+			throw new Error("S3 storage is not available. Please install @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner");
+		}
+
+		// Extract file extension from base64 data URL
+		const match = fileData.match(/^data:image\/(\w+);base64,/);
+		const extension = match ? match[1] : "png";
+		const contentType = match ? `image/${match[1]}` : "image/png";
+
+		// Generate unique filename
+		const filename = `${generateId()}.${extension}`;
+		const key = `uploads/${userId}/${filename}`;
+
+		// Extract base64 data without prefix
+		const base64Data = fileData.replace(/^data:image\/\w+;base64,/, "");
+		const buffer = Buffer.from(base64Data, "base64");
+
+		// Upload to S3
+		await this.s3Client.send(
+			new this.PutObjectCommand({
+				Bucket: this.config.bucket,
+				Key: key,
+				Body: buffer,
+				ContentType: contentType,
+			}),
+		);
+
+		// Return S3 key
+		return key;
+	}
+
+	async get(file: typeof files.$inferSelect, userId: string): Promise<string | null> {
+		if (inBrowser) {
+			// In browser, return a signed URL or stored URL
+			return file.url;
+		}
+
+		await this.initialize();
+		if (!this.sdkAvailable || !this.s3Client) {
+			throw new Error("S3 storage is not available. Please install @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner");
+		}
+
+		// Generate a presigned URL for temporary access
+		try {
+			const command = new this.GetObjectCommand({
+				Bucket: this.config.bucket,
+				Key: file.url,
+			});
+			return await this.getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
+		} catch {
+			return null;
+		}
+	}
+
+	async getData(file: typeof files.$inferSelect, userId: string): Promise<string | null> {
+		if (inBrowser) {
+			return null;
+		}
+
+		await this.initialize();
+		if (!this.sdkAvailable || !this.s3Client) {
+			throw new Error("S3 storage is not available. Please install @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner");
+		}
+
+		try {
+			const command = new this.GetObjectCommand({
+				Bucket: this.config.bucket,
+				Key: file.url,
+			});
+			const response = await this.s3Client.send(command);
+			const bytes = await response.Body.transformToByteArray();
+			const base64 = Buffer.from(bytes).toString("base64");
+			const fileSuffix = file.url.split(".").pop();
+			return base64ToDataURI(base64, fileSuffix);
+		} catch {
+			return null;
+		}
+	}
+}
+
+// Storage Provider Factory
+class StorageProviderFactory {
+	private providers: Map<Storage, FileStorageProvider> = new Map();
+	private defaultProvider: FileStorageProvider;
+
+	constructor() {
+		// Initialize default base64 provider
+		this.defaultProvider = new Base64StorageProvider();
+		this.providers.set("base64", this.defaultProvider);
+
+		// Initialize disk provider if configured
+		if (!inBrowser) {
+			// Resolve to absolute path to ensure file access works correctly
+			const diskPath = process.env.FILE_STORAGE_DISK_PATH
+				? (process.env.FILE_STORAGE_DISK_PATH.startsWith("/")
+					? process.env.FILE_STORAGE_DISK_PATH
+					: `${process.cwd()}/${process.env.FILE_STORAGE_DISK_PATH}`)
+				: `${process.cwd()}/.files`;
+			this.providers.set("disk", new DiskStorageProvider(diskPath));
+
+			// Initialize S3 provider if configured
+			if (
+				process.env.S3_BUCKET &&
+				process.env.S3_REGION &&
+				process.env.S3_ACCESS_KEY_ID &&
+				process.env.S3_SECRET_ACCESS_KEY
+			) {
+				this.providers.set(
+					"s3",
+					new S3StorageProvider({
+						bucket: process.env.S3_BUCKET,
+						region: process.env.S3_REGION,
+						accessKeyId: process.env.S3_ACCESS_KEY_ID,
+						secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+						endpoint: process.env.S3_ENDPOINT,
+					}),
+				);
+			}
+		}
+	}
+
+	getProvider(type: Storage): FileStorageProvider {
+		const provider = this.providers.get(type);
+		if (!provider) {
+			// Fallback to base64 if provider not found
+			return this.defaultProvider;
+		}
+		return provider;
+	}
+
+	getDefaultProvider(): FileStorageProvider {
+		return this.defaultProvider;
+	}
+}
+
+// Global storage factory instance
+const storageFactory = new StorageProviderFactory();
+
+// Get current storage type from environment
+export const fileStorage: Storage = inBrowser
+	? "base64"
+	: ((process.env.FILE_STORAGE as Storage) || "base64");
+
+// Get current storage provider
+export function getCurrentStorageProvider(): FileStorageProvider {
+	return storageFactory.getProvider(fileStorage);
+}
+
+// Save files to storage
+export const saveFiles = async (fileDatas: string[], userId: string): Promise<string[]> => {
 	const { db } = getContext();
+	const provider = getCurrentStorageProvider();
 
-	const filesSave = await db
-		.insert(files)
-		.values(
-			await Promise.all(
-				fileDatas.map(async (file) => ({
-					userId,
-					storage: fileStorage,
-					url: await storageHandlers[fileStorage].save(file, userId),
-				})),
-			),
-		)
-		.returning();
+	// Generate IDs and save files
+	const fileEntries = await Promise.all(
+		fileDatas.map(async (fileData) => {
+			const id = generateId();
+			const url = await provider.save(fileData, userId);
+			return {
+				id,
+				userId,
+				storage: provider.type,
+				url,
+			};
+		}),
+	);
 
-	return filesSave.map((f) => f.id);
+	// Insert all files at once
+	await db.insert(files).values(fileEntries);
+
+	// Return generated IDs
+	return fileEntries.map((f) => f.id);
 };
 
+// Get file metadata
 export const getFileMetadata = async (fileId: string, userId: string) => {
 	const { db } = getContext();
 
@@ -106,12 +401,31 @@ export const getFileMetadata = async (fileId: string, userId: string) => {
 		return null;
 	}
 
-	const accessUrl = await storageHandlers[file.storage].get(file, userId);
+	const provider = storageFactory.getProvider(file.storage);
+	const accessUrl = await provider.get(file, userId);
 	if (!accessUrl) {
 		return null;
 	}
 
-	const protocol = new URL(accessUrl).protocol;
+	// Determine protocol based on storage type
+	let protocol: string;
+	switch (file.storage) {
+		case "disk":
+			protocol = "file";
+			break;
+		case "s3":
+			protocol = "https";
+			break;
+		default:
+			// For base64 or other types, try to detect from URL
+			try {
+				const url = new URL(accessUrl);
+				protocol = url.protocol.replace(":", "");
+			} catch {
+				protocol = "data";
+			}
+	}
+
 	return {
 		file,
 		protocol,
@@ -119,45 +433,64 @@ export const getFileMetadata = async (fileId: string, userId: string) => {
 	};
 };
 
-/**
- * Get file base64 data URL
- * @param fileId File ID to get data for
- * @param userId User ID to check access
- * @param redirect
- * @returns
- */
-export const getFileData = async (fileId: string, userId: string) => {
+// Get file data as base64 data URL
+export const getFileData = async (fileId: string, userId: string): Promise<string | null> => {
 	const metadata = await getFileMetadata(fileId, userId);
 	if (!metadata) {
 		return null;
 	}
 
 	if (inBrowser) {
-		return await storageHandlers.base64.get(metadata.file, userId);
+		// In browser, use base64 provider
+		const base64Provider = storageFactory.getProvider("base64");
+		return await base64Provider.get(metadata.file, userId);
 	}
 
+	// Try to use provider's getData method if available
+	const provider = storageFactory.getProvider(metadata.file.storage);
+	if (provider.getData) {
+		return await provider.getData(metadata.file, userId);
+	}
+
+	// Fallback based on protocol
 	switch (metadata.protocol) {
-		case "data:":
+		case "data":
 			return metadata.accessUrl;
-		case "file:": {
+		case "file": {
 			const fs = await import("node:fs/promises");
-			const fileSuffix = metadata.accessUrl.split(".").pop();
-			return base64ToDataURI(await fs.readFile(metadata.accessUrl, "base64"), fileSuffix);
+			try {
+				const fileSuffix = metadata.file.url.split(".").pop();
+				const data = await fs.readFile(metadata.accessUrl, "base64");
+				return base64ToDataURI(data, fileSuffix);
+			} catch {
+				return null;
+			}
 		}
 		default:
 			return await fetchUrlToDataURI(metadata.accessUrl);
 	}
 };
 
-export const getFileUrl = async (fileId: string, userId: string) => {
+// Get file URL for preview
+export const getFileUrl = async (fileId: string, userId: string): Promise<string | null> => {
 	const metadata = await getFileMetadata(fileId, userId);
 	if (!metadata) {
 		return null;
 	}
 
-	if (inBrowser) {
-		return await storageHandlers.base64.get(metadata.file, userId);
+	// For base64 storage, return the data URL directly
+	if (metadata.file.storage === "base64") {
+		return metadata.accessUrl;
 	}
 
+	// For S3, return the presigned URL directly
+	if (metadata.file.storage === "s3") {
+		return metadata.accessUrl;
+	}
+
+	// For disk storage, use the preview endpoint
 	return `/api/files/preview/${metadata.file.id}`;
 };
+
+// Export storage providers for external use
+export { Base64StorageProvider, DiskStorageProvider, S3StorageProvider, storageFactory };

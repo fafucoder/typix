@@ -3,7 +3,7 @@ import { customAlphabet } from "nanoid/non-secure";
 
 const generateId = () => customAlphabet("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 16)();
 
-const storage = ["base64", "disk"] as const;
+const storage = ["base64", "disk", "s3"] as const;
 export type Storage = (typeof storage)[number];
 
 // Files table

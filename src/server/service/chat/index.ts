@@ -5,7 +5,7 @@ import { chats, messageAttachments, messageGenerations, messages } from "@/serve
 import { createSchemaOmits } from "@/server/db/util";
 import { inBrowser, inCfWorker } from "@/server/lib/env";
 import { ServiceException } from "@/server/lib/exception";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
 import z from "zod/v4";
 import { customAlphabet } from "nanoid/non-secure";
@@ -114,7 +114,11 @@ const getChatById = async (req: GetChatById, ctx: RequestContext) => {
 		where: and(eq(chats.id, req.id), eq(chats.userId, userId), eq(chats.deleted, 0)),
 		with: {
 			messages: {
-				orderBy: [messages.createdAt],
+				orderBy: [
+					messages.createdAt,
+					sql`CASE WHEN ${messages.role} = 'user' THEN 0 ELSE 1 END`,
+					messages.id,
+				],
 				with: {
 					generation: true,
 					attachments: {
@@ -133,16 +137,30 @@ const getChatById = async (req: GetChatById, ctx: RequestContext) => {
 
 	const chatMessages = await Promise.all(
 		chat.messages.map(async (msg) => {
-			const fileIds = msg.generation?.fileIds as string[] | null;
+			// Parse fileIds from JSON string or plain string
+			let fileIds: string[] | null = null;
+			if (msg.generation?.fileIds) {
+				try {
+					const parsed = JSON.parse(msg.generation.fileIds);
+					fileIds = Array.isArray(parsed) ? parsed : [parsed];
+				} catch {
+					// If JSON parse fails, treat it as a single file ID
+					fileIds = [msg.generation.fileIds];
+				}
+			}
 
 			// Process attachments for user messages
 			const attachmentUrls = msg.attachments
 				? await Promise.all(
-						msg.attachments.map(async (attachment) => ({
-							id: attachment.id,
-							type: attachment.type,
-							url: await getFileUrl(attachment.fileId, userId),
-						})),
+						msg.attachments.map(async (attachment) => {
+							const url = await getFileUrl(attachment.fileId, userId);
+							console.log(`[ChatService] Attachment ${attachment.id} fileId=${attachment.fileId}, url=${url}`);
+							return {
+								id: attachment.id,
+								type: attachment.type,
+								url,
+							};
+						}),
 					)
 				: [];
 

@@ -11,17 +11,22 @@ const app = new Hono<Env>()
 		const user = c.var.user!;
 		const fileId = c.req.param("id");
 
+		console.log(`[File Preview] Request for fileId: ${fileId}, userId: ${user.id}`);
+
 		const metadata = await getFileMetadata(fileId, user.id);
 		if (!metadata) {
+			console.log(`[File Preview] File not found: ${fileId}`);
 			return c.json({ error: "File not found" }, 404);
 		}
 
+		console.log(`[File Preview] Found file: ${JSON.stringify(metadata.file)}, protocol: ${metadata.protocol}, accessUrl: ${metadata.accessUrl}`);
+
 		// Determine content type based on protocol
 		let contentType = "image/png";
-		if (metadata.protocol === "data:") {
+		if (metadata.protocol === "data") {
 			const base64Header = metadata.accessUrl.split(",")[0];
 			contentType = base64Header?.split(";")[0]?.split(":")[1] || "image/png";
-		} else if (metadata.protocol === "file:") {
+		} else if (metadata.protocol === "file") {
 			const suffix = metadata.accessUrl.split(".").pop();
 			contentType = `image/${suffix}`;
 		}
@@ -37,7 +42,7 @@ const app = new Hono<Env>()
 		}
 
 		switch (metadata.protocol) {
-			case "data:": {
+			case "data": {
 				const [base64Header, base64Data] = metadata.accessUrl.split(",");
 				if (!base64Header || !base64Data) {
 					return c.json({ error: "Invalid file data" }, 500);
@@ -47,11 +52,18 @@ const app = new Hono<Env>()
 					await stream.write(buffer);
 				});
 			}
-			case "file:": {
-				const fileBuffer = await fs.readFile(metadata.accessUrl);
-				return stream(c, async (stream) => {
-					await stream.write(fileBuffer);
-				});
+			case "file": {
+				console.log(`[File Preview] Reading file from: ${metadata.accessUrl}`);
+				try {
+					const fileBuffer = await fs.readFile(metadata.accessUrl);
+					console.log(`[File Preview] File read successfully, size: ${fileBuffer.length} bytes`);
+					return stream(c, async (stream) => {
+						await stream.write(fileBuffer);
+					});
+				} catch (error) {
+					console.error(`[File Preview] Error reading file: ${error}`);
+					return c.json({ error: "Failed to read file" }, 500);
+				}
 			}
 			default: {
 				// For other protocols, we assume it's a URL and redirect
