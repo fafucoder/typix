@@ -10,11 +10,11 @@ import { default as openAI } from "./openai";
 import { default as flux } from "./flux";
 import { default as fal } from "./fal";
 import { default as minimax } from "./minimax";
-import { default as glm } from "./glm";
+import { default as zhipu } from "./zhipu";
 import { default as kling } from "./kling";
 import { default as vidu } from "./vidu";
 
-export const AI_PROVIDERS = [byteDance, alibaba, cloudflare, google, openAI, flux, fal, minimax, glm, kling, vidu].map(enhancedProvider);
+export const AI_PROVIDERS = [byteDance, alibaba, cloudflare, google, openAI, flux, fal, minimax, zhipu, kling, vidu].map(enhancedProvider);
 
 export function getDefaultProvider() {
 	return AI_PROVIDERS[0]!;

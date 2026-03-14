@@ -1,4 +1,4 @@
-import { Vidu, Kling,  ModelIcon as LobeModelIcon, ProviderIcon as LobeProviderIcon } from "@lobehub/icons";
+import {Vidu, Kling, ModelIcon as LobeModelIcon, ProviderIcon as LobeProviderIcon } from "@lobehub/icons";
 import type { ProviderIconProps as LobeProviderIconProps } from "@lobehub/icons/es/features/ProviderIcon";
 
 export default function ProviderIcon(props: LobeProviderIconProps) {
@@ -6,10 +6,10 @@ export default function ProviderIcon(props: LobeProviderIconProps) {
 		return <LobeModelIcon model={props.provider} {...props} />;
 	}
 	if (props.provider?.toLocaleLowerCase() === "vidu") {
-		return <Vidu {...props} />;
+		return <Vidu.Color {...props} />;
 	}
 	if (props.provider?.toLocaleLowerCase() === "kling") {
-		return <Kling {...props} />;
+		return <Kling.Color {...props} />;
 	}
 	return <LobeProviderIcon {...props} />;
 }

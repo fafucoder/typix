@@ -35,9 +35,9 @@ const aspectRatioSizes = {
   "3:4": "768x1024",
 };
 
-const Glm: AiProvider = {
-  id: "glm",
-  name: "GLM (智谱AI)",
+const Zhipu: AiProvider = {
+  id: "zhipu",
+  name: "GLM",
   supportCors: false,
   settings: glmSettingsSchema,
 
@@ -46,7 +46,7 @@ const Glm: AiProvider = {
   },
   generate: async (request, settings) => {
     const { baseURL, apiKey } = 
-      Glm.parseSettings<GlmSettings>(settings);
+      Zhipu.parseSettings<GlmSettings>(settings);
     const model = request.modelId;
 
     let size: any = null;
@@ -115,7 +115,7 @@ const Glm: AiProvider = {
       return {
         images,
         model: request.modelId,
-        provider: "glm",
+        provider: "zhipu",
       };
     } catch (error) {
       throw error;
@@ -124,7 +124,7 @@ const Glm: AiProvider = {
 
   generateVideo: async (request: TypixVideoGenerateRequest, settings: ApiProviderSettings): Promise<TypixVideoApiResponse> => {
     const { baseURL, apiKey } = 
-      Glm.parseSettings<GlmSettings>(settings);
+      Zhipu.parseSettings<GlmSettings>(settings);
     const model = request.modelId || "cogvideox-3";
 
     try {
@@ -256,4 +256,4 @@ async function pollVideoTask(taskId: string, apiKey: string, baseURL: string): P
   return null;
 }
 
-export default Glm;
+export default Zhipu;

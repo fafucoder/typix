@@ -15,7 +15,7 @@ import {
   Home,
   AlertTriangle,
 } from 'lucide-react'
-import { ProviderIcon as LobeProviderIcon, ModelIcon as LobeModelIcon } from '@lobehub/icons'
+import { ModelIcon as LobeModelIcon } from '@lobehub/icons'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,6 +34,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { toast } from 'sonner'
 import { useRouter } from '@tanstack/react-router'
 import { aiService, type AiProvider, type AiModel } from '@/lib/api/ai'
+import ProviderIcon from '@/components/icon/ProviderIcon'
 
 
 
@@ -396,7 +397,7 @@ function AIProvidersPage() {
                       <div className='flex items-center justify-between w-full'>
                         <div className='flex items-center gap-3'>
                           <div className='flex h-10 w-10 items-center justify-center rounded-full bg-muted'>
-                            <LobeProviderIcon provider={provider.providerId} size={24} />
+                            <ProviderIcon provider={provider.providerId} size={24} />
                           </div>
                           <div className='flex-1 min-w-0'>
                             <span className='block font-medium truncate'>{provider.name}</span>
@@ -454,7 +455,7 @@ function AIProvidersPage() {
                   </Button>
                   <div className='flex items-center gap-2 lg:gap-4'>
                     <div className='flex h-10 w-10 items-center justify-center rounded-full bg-muted'>
-                      <LobeProviderIcon provider={selectedProvider.providerId} size={24} />
+                      <ProviderIcon provider={selectedProvider.providerId} size={24} />
                     </div>
                     <div>
                       <span className='col-start-2 row-span-2 text-sm font-medium lg:text-base'>
