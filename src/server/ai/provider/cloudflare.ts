@@ -1,20 +1,17 @@
 import { inCfWorker } from "@/server/lib/env";
-import { GenError, type ReplacePropertyType } from "@/server/lib/types";
+import { GenError } from "@/server/lib/types";
 import { base64ToBlob, base64ToDataURI, dataURItoBase64, readableStreamToDataURI } from "@/server/lib/util";
 import { getContext } from "@/server/service/context";
 import { type TypixGenerateRequest, commonAspectRatioSizes } from "../types/api";
-import type { AiModel } from "../types/model";
 import type { AiProvider, ApiProviderSettings, ApiProviderSettingsItem } from "../types/provider";
 import {
 	type ProviderSettingsType,
-	chooseAblility,
 	doParseSettings,
-	findModel,
 	getProviderSettingsSchema,
 } from "../types/provider";
 
 // Helper function to create FormData from params
-const createFormData = (params: any, model: CloudflareAiModel, request: TypixGenerateRequest): FormData => {
+const createFormData = (params: any, maxInputImages: number | undefined, request: TypixGenerateRequest): FormData => {
 	const form = new FormData();
 	form.append("prompt", params.prompt);
 	if (params.width) form.append("width", String(params.width));
@@ -22,11 +19,11 @@ const createFormData = (params: any, model: CloudflareAiModel, request: TypixGen
 
 	// Handle image editing (i2i) with multiple input images
 	if (request.images) {
-		const maxInputImages = model.maxInputImages || 1;
+		const maxImages = maxInputImages || 1;
 		const images = request.images;
 
 		// Append images with numbered parameter names
-		for (let i = 0; i < Math.min(images.length, maxInputImages); i++) {
+		for (let i = 0; i < Math.min(images.length, maxImages); i++) {
 			const imageBlob = base64ToBlob(dataURItoBase64(images[i]!));
 			form.append(`input_image_${i}`, imageBlob);
 		}
@@ -77,9 +74,11 @@ const generateSingle = async (request: TypixGenerateRequest, settings: ApiProvid
 	const AI = getContext().AI;
 	const { builtin, apiKey, accountId } = Cloudflare.parseSettings<CloudflareSettings>(settings);
 
-	const model = findModel(Cloudflare, request.modelId) as CloudflareAiModel;
-	const genType = chooseAblility(request, model.ability);
-	const inputType = model.inputType || "JSON";
+	// Get ability and maxInputImages from request.model
+	const ability = request.model?.ability || "t2i";
+	const maxInputImages = request.model?.maxInputImages;
+	// Get inputType from model metadata (stored in request.model)
+	const inputType = (request.model as any)?.inputType || "JSON";
 
 	const params = {
 		prompt: request.prompt,
@@ -89,14 +88,14 @@ const generateSingle = async (request: TypixGenerateRequest, settings: ApiProvid
 		params.width = size?.width;
 		params.height = size?.height;
 	}
-	if (genType === "i2i") {
+	if (ability === "i2i") {
 		params.image_b64 = dataURItoBase64(request.images![0]!);
 	}
 
 	// Built-in Cloudflare Worker AI
 	if (inCfWorker && AI && builtin === true) {
 		if (inputType === "FormData") {
-			const form = createFormData(params, model, request);
+			const form = createFormData(params, maxInputImages, request);
 			const formRequest = new Request("http://dummy", {
 				method: "POST",
 				body: form,
@@ -131,7 +130,7 @@ const generateSingle = async (request: TypixGenerateRequest, settings: ApiProvid
 		const resp = await fetch(url, {
 			method: "POST",
 			headers,
-			body: createFormData(params, model, request),
+			body: createFormData(params, maxInputImages, request),
 		});
 		return handleApiResponse(resp);
 	}
@@ -179,13 +178,7 @@ const cloudflareSettingsBuiltinSchema = [
 // Automatically generate type from schema
 export type CloudflareSettings = ProviderSettingsType<typeof cloudflareSettingsBuiltinSchema>;
 
-type CloudflareAiModel = AiModel & {
-	inputType?: "JSON" | "FormData";
-};
-
-type CloudflareProvider = ReplacePropertyType<AiProvider, "models", CloudflareAiModel[]>;
-
-const Cloudflare: CloudflareProvider = {
+const Cloudflare: AiProvider = {
 	id: "cloudflare",
 	name: "Cloudflare AI",
 	settings: () => {
@@ -193,76 +186,7 @@ const Cloudflare: CloudflareProvider = {
 			? cloudflareSettingsBuiltinSchema
 			: cloudflareSettingsNotBuiltInSchema;
 	},
-	enabledByDefault: true,
-	models: [
-		{
-			id: "@cf/black-forest-labs/flux-2-klein-9b",
-			name: "FLUX.2 [Klein] - 9B",
-			ability: "i2i",
-			maxInputImages: 4,
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-			inputType: "FormData",
-		},
-		{
-			id: "@cf/black-forest-labs/flux-2-klein-4b",
-			name: "FLUX.2 [Klein] - 4B",
-			ability: "i2i",
-			maxInputImages: 4,
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-			inputType: "FormData",
-		},
-		{
-			id: "@cf/black-forest-labs/flux-2-dev",
-			name: "FLUX.2-dev",
-			ability: "i2i",
-			maxInputImages: 4,
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-			inputType: "FormData",
-		},
-		{
-			id: "@cf/leonardo/lucid-origin",
-			name: "Lucid Origin",
-			ability: "t2i",
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-		{
-			id: "@cf/black-forest-labs/flux-1-schnell",
-			name: "FLUX.1-schnell",
-			ability: "t2i",
-			enabledByDefault: true,
-		},
-		{
-			id: "@cf/lykon/dreamshaper-8-lcm",
-			name: "DreamShaper 8 LCM",
-			ability: "t2i",
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-		{
-			id: "@cf/bytedance/stable-diffusion-xl-lightning",
-			name: "Stable Diffusion XL Lightning",
-			ability: "t2i",
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-		// {
-		// 	id: "@cf/runwayml/stable-diffusion-v1-5-img2img",
-		// 	name: "Stable Diffusion v1.5 Img2Img",
-		// 	ability: "i2i",
-		// 	enabledByDefault: true,
-		// },
-		{
-			id: "@cf/stabilityai/stable-diffusion-xl-base-1.0",
-			name: "Stable Diffusion XL Base 1.0",
-			ability: "t2i",
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-	],
+
 	parseSettings: <CloudflareSettings>(settings: ApiProviderSettings) => {
 		const settingsSchema = getProviderSettingsSchema(Cloudflare);
 		return doParseSettings(settings, settingsSchema!) as CloudflareSettings;

@@ -1,5 +1,6 @@
 import { getProviderById } from "@/server/ai/provider";
 import { type ApiProviderSettings, ConfigInvalidError } from "@/server/ai/types/provider";
+import type { AiModel,Ability } from "@/server/ai/types/model";
 import { chats, messageAttachments, messageGenerations, messages } from "@/server/db/schemas";
 import { createSchemaOmits } from "@/server/db/util";
 import { inBrowser, inCfWorker } from "@/server/lib/env";
@@ -342,23 +343,67 @@ const executeImageGeneration = async (params: GenerationParams, ctx: RequestCont
 
 	try {
 		const providerInstance = getProviderById(providerId);
-		const provider = await aiService.getAiProviderById({ providerId }, ctx);
-		const settings =
-			provider?.settings?.reduce((acc, setting) => {
-				const value = setting.value ?? setting.defaultValue;
-				if (value !== undefined) {
-					acc[setting.key] = value;
-				}
-				return acc;
-			}, {} as ApiProviderSettings) ?? {};
-
-		const model = providerInstance.models.find((m) => m.id === modelId);
+		
+		// Get ai_provider and specific ai_model from aiService
+		const { dbProvider, dbModel } = await aiService.getAiProviderAndModelById({ providerId, modelId }, ctx);
+		
+		// Validate model exists
+		if (!dbModel) {
+			throw new ServiceException("not_found", `Model ${modelId} not found for provider ${providerId}`);
+		}
+		
+		// Build settings from database fields
+		const settings: ApiProviderSettings = {};
+		
+		// Merge from ai_providers.settings field
+		if (dbProvider.settings) {
+			try {
+				const dbSettingsArray = JSON.parse(dbProvider.settings) as any[];
+				dbSettingsArray.forEach(setting => {
+					const value = setting.value ?? setting.defaultValue;
+					if (value !== undefined && setting.key) {
+						settings[setting.key] = value;
+					}
+				});
+			} catch (e) {
+				console.warn('[AI DB Config] Failed to parse dbProvider.settings:', e);
+			}
+		}
+		
+		// Merge from endpoints and secretKey (higher priority)
+		if (dbProvider.endpoints) {
+			settings.endpoint = dbProvider.endpoints;
+			settings.baseURL = dbProvider.endpoints;
+		}
+		if (dbProvider.secretKey) {
+			settings.apiKey = dbProvider.secretKey;
+		}
+		
+		// Debug log: Print configuration from database
+		console.log(`[AI DB Config] Provider: ${providerId}`);
+		console.log(`[AI DB Config] Endpoints: ${dbProvider.endpoints}`);
+		console.log(`[AI DB Config] SecretKey: ${dbProvider.secretKey ? '***' : 'Not set'}`);
+		console.log(`[AI DB Config] Final settings:`, settings);
+		
+		// Build model object that conforms to AiModel interface
+		const model: AiModel = {
+			id: dbModel.modelId,
+			name: dbModel.modelId,
+			ability: dbModel.ability as Ability || "t2i",
+			supportedAspectRatios: dbModel.supportedAspectRatios,
+			enabled: dbModel.enabled === 1,
+			maxInputImages: dbModel.maxInputImages ?? undefined,
+		};
+		
+		// Debug log: Print model information
+		console.log(`[AI DB Config] Model from DB:`, dbModel);
+		console.log(`[AI DB Config] Built model:`, model);
 		let referImages: string[] | undefined;
 
 		// Always use user uploaded images if provided
 		if (userImages && userImages.length > 0) {
 			referImages = userImages;
-		} else if (model?.ability !== "t2i") {
+		} else if (model.ability !== "t2i") {
 			// If no user images and model supports image edit, refer to last message's images
 			const lastMessageImage = async () => {
 				const whereConditions = [
@@ -385,7 +430,7 @@ const executeImageGeneration = async (params: GenerationParams, ctx: RequestCont
 				});
 				const fileIds = lastMessage?.generation?.fileIds as string[] | null;
 				if (fileIds && fileIds.length > 0) {
-					switch (model?.ability) {
+					switch (model.ability) {
 						case "i2i": {
 							// For i2i models, use appropriate number of images based on maxInputImages
 							const maxImages = model.maxInputImages || 1;
@@ -413,6 +458,7 @@ const executeImageGeneration = async (params: GenerationParams, ctx: RequestCont
 				images: referImages,
 				n: imageCount || 1, // Pass the image count to provider
 				aspectRatio: aspectRatio as any, // Pass the aspect ratio to provider
+				model: model,
 			},
 			settings,
 		);

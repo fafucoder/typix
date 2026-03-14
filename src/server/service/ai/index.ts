@@ -6,7 +6,18 @@ import { and, eq, inArray } from "drizzle-orm";
 import { createInsertSchema, createUpdateSchema } from "drizzle-zod";
 import z from "zod/v4";
 import { type RequestContext, getContext } from "../context";
-import type { Ability, AiModel, AiProvider } from "@/server/ai/types/model";
+import type { Ability, AiModel } from "@/server/ai/types/model";
+import type { AspectRatio } from "@/server/ai/types/api";
+
+// Service-level provider type that includes models for frontend consumption
+export interface ServiceAiProvider {
+	id: string;
+	name: string;
+	enabled: boolean;
+	supportCors?: boolean;
+	settings?: ApiProviderSettingsItem[];
+	models: AiModel[];
+}
 
 // Type definitions for provider data from database
 interface DbAiProvider {
@@ -26,46 +37,59 @@ interface DbAiModel {
 	id: string;
 	providerId: string;
 	modelId: string;
+	name: string | null;
 	type: "text2image" | "text2video";
 	enabled: number;
+	maxInputImages: number | null;
 	sort: number;
 	createdAt: Date;
 	updatedAt: Date;
+	ability: string;
+	supportedAspectRatios: string[];
 }
 
 // Convert database model to service model format
-const dbModelToServiceModel = (dbModel: DbAiModel, providerId: string): AiModel => {
-	const hardcodedProvider = getHardcodedProviderById(providerId);
-	const hardcodedModel = hardcodedProvider?.models.find(m => m.modelId === dbModel.modelId);
+const dbModelToServiceModel = (dbModel: DbAiModel): AiModel => {
+	let supportedAspectRatios: AspectRatio[] = ["1:1", "16:9", "9:16", "4:3", "3:4"];
+	
+	// Parse supportedAspectRatios from JSON if available
+	if (dbModel.supportedAspectRatios) {
+		try {
+			const parsed = typeof dbModel.supportedAspectRatios === 'string' 
+				? JSON.parse(dbModel.supportedAspectRatios) 
+				: dbModel.supportedAspectRatios;
+			if (Array.isArray(parsed) && parsed.length > 0) {
+				supportedAspectRatios = parsed as AspectRatio[];
+			}
+		} catch (error) {
+			console.error('Failed to parse supportedAspectRatios:', error);
+		}
+	}
 	
 	return {
 		id: dbModel.modelId,
-		name: hardcodedModel?.name || dbModel.modelId,
-		ability: hardcodedModel?.ability as Ability || "t2i",
-		supportedAspectRatios: hardcodedModel?.supportedAspectRatios,
+		name: dbModel.name || dbModel.modelId,
+		ability: dbModel.ability as Ability,
+		maxInputImages: dbModel.maxInputImages ?? 1,
 		enabled: dbModel.enabled === 1,
+		supportedAspectRatios,
 	};
 };
 
 // Convert database provider to service provider format
-const dbProviderToServiceProvider = (dbProvider: DbAiProvider, models: AiModel[]): AiProvider => {
+const dbProviderToServiceProvider = (dbProvider: DbAiProvider, models: AiModel[]): ServiceAiProvider => {
 	const hardcodedProvider = getHardcodedProviderById(dbProvider.providerId);
 	const settingsSchema: ApiProviderSettingsItem[] | undefined = dbProvider.settings
 		? (JSON.parse(dbProvider.settings) as ApiProviderSettingsItem[])
-		: hardcodedProvider?.settings;
+		: (hardcodedProvider?.settings ? (typeof hardcodedProvider.settings === 'function' ? hardcodedProvider.settings() : hardcodedProvider.settings) : undefined);
 
 	return {
 		id: dbProvider.providerId,
 		name: dbProvider.name,
 		enabled: dbProvider.enabled === 1,
-		enabledByDefault: hardcodedProvider?.enabledByDefault || false,
 		supportCors: hardcodedProvider?.supportCors || false,
 		settings: settingsSchema,
 		models: models,
-		generate: hardcodedProvider?.generate || (async () => {
-			throw new ServiceException("not_implemented", "Generate method not implemented for this provider");
-		}),
-		parseSettings: hardcodedProvider?.parseSettings || (() => {}),
 	};
 };
 
@@ -76,7 +100,7 @@ const getAiProviders = async (_ctx: RequestContext) => {
 	const dbAiProviders = await db.query.aiProviders.findMany({
 		orderBy: (aiProviders, { desc }) => [desc(aiProviders.sort)],
 	});
-	const providers: AiProvider[] = [];
+	const providers: ServiceAiProvider[] = [];
 
 	for (const dbProvider of dbAiProviders) {
 		// Get models for this provider sorted by sort field
@@ -84,7 +108,7 @@ const getAiProviders = async (_ctx: RequestContext) => {
 			where: eq(aiModels.providerId, dbProvider.id),
 			orderBy: (aiModels, { desc }) => [desc(aiModels.sort)],
 		});
-		const serviceModels = dbModels.map(dbModel => dbModelToServiceModel(dbModel, dbProvider.providerId));
+		const serviceModels = dbModels.map(dbModel => dbModelToServiceModel(dbModel));
 		const provider = dbProviderToServiceProvider(dbProvider, serviceModels);
 		providers.push(provider);
 	}
@@ -99,7 +123,7 @@ export type GetEnabledAiProvidersWithModels = z.infer<typeof GetEnabledAiProvide
 
 const getEnabledAiProvidersWithModels = async (req: GetEnabledAiProvidersWithModels, _ctx: Partial<RequestContext> = {}) => {
 	const { db } = getContext();
-	const modelType = req.modelType || "text2image";
+	const modelType = req.modelType;
 
 	// Get all enabled providers from database sorted by sort field
 	const dbAiProviders = await db.query.aiProviders.findMany({
@@ -107,7 +131,7 @@ const getEnabledAiProvidersWithModels = async (req: GetEnabledAiProvidersWithMod
 		orderBy: (aiProviders, { desc }) => [desc(aiProviders.sort)],
 	});
 
-	const providers: AiProvider[] = [];
+	const providers: ServiceAiProvider[] = [];
 
 	for (const dbProvider of dbAiProviders) {
 		// Get enabled models for this provider sorted by sort field
@@ -115,13 +139,13 @@ const getEnabledAiProvidersWithModels = async (req: GetEnabledAiProvidersWithMod
 			where: and(
 				eq(aiModels.providerId, dbProvider.id),
 				eq(aiModels.enabled, 1),
-				eq(aiModels.type, modelType),
+				modelType ? eq(aiModels.type, modelType) : undefined,
 			),
 			orderBy: (aiModels, { desc }) => [desc(aiModels.sort)],
 		});
 		
 		if (dbModels.length > 0) {
-			const serviceModels = dbModels.map(dbModel => dbModelToServiceModel(dbModel, dbProvider.providerId));
+			const serviceModels = dbModels.map(dbModel => dbModelToServiceModel(dbModel));
 			const provider = dbProviderToServiceProvider(dbProvider, serviceModels);
 			providers.push(provider);
 		}
@@ -152,9 +176,64 @@ const getAiProviderById = async (req: GetAiProviderById, _ctx: RequestContext) =
 		where: eq(aiModels.providerId, dbProvider.id),
 		orderBy: (aiModels, { desc }) => [desc(aiModels.sort)],
 	});
-	const serviceModels = dbModels.map(dbModel => dbModelToServiceModel(dbModel, dbProvider.providerId));
+	const serviceModels = dbModels.map(dbModel => dbModelToServiceModel(dbModel));
 
 	return dbProviderToServiceProvider(dbProvider, serviceModels);
+};
+
+export const GetAiProviderWithDbDataSchema = z.object({
+	providerId: z.string(),
+});
+export type GetAiProviderWithDbData = z.infer<typeof GetAiProviderWithDbDataSchema>;
+
+const getAiProviderWithDbData = async (req: GetAiProviderWithDbData, _ctx: RequestContext) => {
+	const { db } = getContext();
+
+	// Get provider from database
+	const dbProvider = await db.query.aiProviders.findFirst({
+		where: eq(aiProviders.providerId, req.providerId),
+	});
+
+	if (!dbProvider) {
+		throw new ServiceException("not_found", "AI provider not found in database");
+	}
+
+	// Get models for this provider sorted by sort field
+	const dbModels = await db.query.aiModels.findMany({
+		where: eq(aiModels.providerId, dbProvider.id),
+		orderBy: (aiModels, { desc }) => [desc(aiModels.sort)],
+	});
+
+	return { dbProvider, dbModels };
+};
+
+export const GetAiProviderAndModelByIdSchema = z.object({
+	providerId: z.string(),
+	modelId: z.string(),
+});
+export type GetAiProviderAndModelById = z.infer<typeof GetAiProviderAndModelByIdSchema>;
+
+const getAiProviderAndModelById = async (req: GetAiProviderAndModelById, _ctx: RequestContext) => {
+	const { db } = getContext();
+
+	// Get provider from database
+	const dbProvider = await db.query.aiProviders.findFirst({
+		where: eq(aiProviders.providerId, req.providerId),
+	});
+
+	if (!dbProvider) {
+		throw new ServiceException("not_found", "AI provider not found in database");
+	}
+
+	// Get specific model for this provider
+	const dbModel = await db.query.aiModels.findFirst({
+		where: and(
+			eq(aiModels.providerId, dbProvider.id),
+			eq(aiModels.modelId, req.modelId)
+		),
+	});
+
+	return { dbProvider, dbModel };
 };
 
 export const UpdateAiProviderSchema = createUpdateSchema(aiProviders).pick({
@@ -262,6 +341,8 @@ export const aiService = {
 	getAiProviders,
 	getEnabledAiProvidersWithModels,
 	getAiProviderById,
+	getAiProviderWithDbData,
+	getAiProviderAndModelById,
 	updateAiProvider,
 	getAiModelsByProviderId,
 	updateAiModel,

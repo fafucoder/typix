@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import type { TypixGenerateRequest } from "../types/api";
 import type { AiProvider, ApiProviderSettings, ApiProviderSettingsItem } from "../types/provider";
-import { type ProviderSettingsType, chooseAblility, doParseSettings, findModel } from "../types/provider";
+import { type ProviderSettingsType, doParseSettings } from "../types/provider";
 
 const googleSettingsSchema = [
 	{
@@ -30,7 +30,8 @@ const generateSingle = async (request: TypixGenerateRequest, settings: ApiProvid
 		},
 	});
 
-	const ability = chooseAblility(request, findModel(Google, request.modelId).ability);
+	// Get ability from request.model
+	const ability = request.model?.ability || "t2i";
 
 	let contents: any;
 
@@ -96,55 +97,8 @@ const Google: AiProvider = {
 	id: "google",
 	name: "Google",
 	supportCors: true,
-	enabledByDefault: true,
 	settings: googleSettingsSchema,
-	models: [
-		{
-			id: "gemini-3-pro-image-preview",
-			name: "Nano Banana Pro",
-			ability: "i2i",
-			maxInputImages: 4,
-			enabledByDefault: true,
-		},
-		{
-			id: "gemini-2.5-flash-image-preview",
-			name: "Nano Banana",
-			ability: "i2i",
-			maxInputImages: 4,
-			enabledByDefault: true,
-		},
-		{
-			id: "gemini-2.0-flash-preview-image-generation",
-			name: "Gemini 2.0 Flash Image Generation",
-			ability: "i2i",
-			maxInputImages: 4,
-			enabledByDefault: true,
-		},
-		{
-			id: "imagen-4.0-generate-001",
-			name: "Imagen 4.0",
-			ability: "t2i",
-			enabledByDefault: true,
-		},
-		{
-			id: "imagen-4.0-ultra-generate-001",
-			name: "Imagen 4.0 Ultra",
-			ability: "t2i",
-			enabledByDefault: true,
-		},
-		{
-			id: "imagen-4.0-fast-generate-001",
-			name: "Imagen 4.0 Fast",
-			ability: "t2i",
-			enabledByDefault: true,
-		},
-		{
-			id: "imagen-3.0-generate-002",
-			name: "Imagen 3.0",
-			ability: "t2i",
-			enabledByDefault: true,
-		},
-	],
+
 	parseSettings: <GoogleSettings>(settings: ApiProviderSettings) => {
 		return doParseSettings(settings, googleSettingsSchema) as GoogleSettings;
 	},

@@ -6,9 +6,7 @@ import type {
 } from "../types/provider";
 import {
   type ProviderSettingsType,
-  chooseAblility,
   doParseSettings,
-  findModel,
 } from "../types/provider";
 
 const minimaxSettingsSchema = [
@@ -39,18 +37,8 @@ const Minimax: AiProvider = {
   id: "minimax",
   name: "MiniMax",
   supportCors: false,
-  enabledByDefault: true,
   settings: minimaxSettingsSchema,
-  models: [
-    {
-      id: "image-01",
-      name: "Image-01",
-      ability: "t2i",
-      maxInputImages: 0,
-      enabledByDefault: true,
-      supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-    },
-  ],
+
   parseSettings: <MinimaxSettings>(settings: ApiProviderSettings) => {
     return doParseSettings(settings, minimaxSettingsSchema) as MinimaxSettings;
   },
@@ -65,10 +53,8 @@ const Minimax: AiProvider = {
     }
 
     try {
-      const ability = chooseAblility(
-        request,
-        findModel(Minimax, request.modelId).ability
-      );
+      // Get ability from request.model
+      const ability = request.model?.ability || "t2i";
 
       let response: Response;
       
@@ -102,7 +88,7 @@ const Minimax: AiProvider = {
       }
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({})) as { error?: { message?: string } };
         throw new Error(
           `MiniMax API error: ${response.status} ${response.statusText} - ${
             errorData.error?.message || "Unknown error"
@@ -110,11 +96,11 @@ const Minimax: AiProvider = {
         );
       }
 
-      const data = await response.json();
+      const data = await response.json() as { data: Array<{ b64_json?: string; url?: string }> };
 
       // Convert base64 to data URI
       const images = await Promise.all(
-        data.data.map(async (item: any) => {
+        data.data.map(async (item) => {
           if (item.b64_json) {
             return base64ToDataURI(item.b64_json, "image/jpeg");
           } else if (item.url) {

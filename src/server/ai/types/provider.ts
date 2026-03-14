@@ -23,8 +23,6 @@ export interface AiProvider {
 	name: string;
 	settings?: ApiProviderSettingsItem[] | (() => ApiProviderSettingsItem[]);
 	supportCors?: boolean; // Whether this provider API supports CORS
-	enabledByDefault?: boolean; // Whether this provider is enabled by default
-	models: AiModel[];
 
 	parseSettings<T>(settings: ApiProviderSettings): T;
 	generate: (request: TypixGenerateRequest, settings: ApiProviderSettings) => Promise<TypixChatApiResponse>;
@@ -135,15 +133,6 @@ export function getProviderSettingsSchema(provider: AiProvider): ApiProviderSett
 
 	return typeof provider.settings === "function" ? provider.settings() : provider.settings;
 }
-
-export function findModel(provider: AiProvider, modelId: string): AiModel {
-	const model = provider.models.find((model) => model.id === modelId);
-	if (!model) {
-		throw new ServiceException("not_found", `Model ${modelId} not found for provider ${provider.id}`);
-	}
-	return model;
-}
-
 export function chooseAblility(request: TypixGenerateRequest, ability: Ability): Ability {
 	if (ability === "t2i") {
 		return ability;

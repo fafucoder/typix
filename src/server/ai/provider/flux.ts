@@ -1,19 +1,19 @@
 import { fetchUrlToDataURI } from "@/server/lib/util";
 import type { TypixGenerateRequest } from "../types/api";
 import type { AiProvider, ApiProviderSettings, ApiProviderSettingsItem } from "../types/provider";
-import { type ProviderSettingsType, chooseAblility, doParseSettings, findModel } from "../types/provider";
+import { type ProviderSettingsType, doParseSettings } from "../types/provider";
 
 // Single image generation helper function
 const generateSingle = async (request: TypixGenerateRequest, settings: ApiProviderSettings): Promise<string[]> => {
 	const { apiKey } = Flux.parseSettings<FluxSettings>(settings);
 
-	const model = findModel(Flux, request.modelId);
-	const genType = chooseAblility(request, model.ability);
+	// Get ability from request.model
+	const ability = request.model?.ability || "t2i";
 
 	const requestBody: any = {
 		prompt: request.prompt,
 	};
-	if (genType === "i2i" && request.images?.[0]) {
+	if (ability === "i2i" && request.images?.[0]) {
 		requestBody.image_url = request.images[0];
 	}
 
@@ -106,52 +106,8 @@ const Flux: AiProvider = {
 	id: "flux",
 	name: "Flux",
 	supportCors: false,
-	enabledByDefault: true,
 	settings: fluxSettingsSchema,
-	models: [
-		{
-			id: "flux-kontext-max",
-			name: "FLUX.1 Kontext [max]",
-			ability: "i2i",
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-		{
-			id: "flux-kontext-pro",
-			name: "FLUX.1 Kontext [pro]",
-			ability: "i2i",
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-		{
-			id: "flux-pro-1.1-ultra",
-			name: "FLUX1.1 [pro] Ultra",
-			ability: "t2i",
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-		{
-			id: "flux-pro-1.1",
-			name: "FLUX1.1 [pro]",
-			ability: "t2i",
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-		{
-			id: "flux-pro",
-			name: "FLUX.1 [pro]",
-			ability: "t2i",
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-		{
-			id: "flux-dev",
-			name: "FLUX.1 [dev]",
-			ability: "t2i",
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-	],
+
 	parseSettings: <FluxSettings>(settings: ApiProviderSettings) => {
 		return doParseSettings(settings, fluxSettingsSchema) as FluxSettings;
 	},

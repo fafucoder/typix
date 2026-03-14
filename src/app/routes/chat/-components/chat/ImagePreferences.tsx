@@ -1,7 +1,6 @@
 import { Slider } from "@/app/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/app/components/ui/tooltip";
 import { cn } from "@/app/lib/utils";
-import { getModelById } from "@/server/ai/provider";
 import type { AspectRatio } from "@/server/ai/types/api";
 import { RectangleHorizontal, RectangleVertical, Square } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -12,8 +11,7 @@ interface ImagePreferencesProps {
 	aspectRatio?: AspectRatio;
 	onImageCountChange: (count: number) => void;
 	onAspectRatioChange: (ratio: AspectRatio | undefined) => void;
-	currentProvider?: string;
-	currentModel?: string;
+	supportedAspectRatios?: AspectRatio[];
 	onClose: () => void;
 }
 
@@ -31,24 +29,11 @@ export function ImagePreferences({
 	aspectRatio,
 	onImageCountChange,
 	onAspectRatioChange,
-	currentProvider,
-	currentModel,
+	supportedAspectRatios = [],
 	onClose,
 }: ImagePreferencesProps) {
 	const { t } = useTranslation();
 	const panelRef = useRef<HTMLDivElement>(null);
-
-	// Get supported aspect ratios from current model
-	const supportedAspectRatios = (() => {
-		if (!currentProvider || !currentModel) return [];
-
-		try {
-			const model = getModelById(currentProvider, currentModel);
-			return model.supportedAspectRatios || [];
-		} catch {
-			return [];
-		}
-	})();
 
 	// Handle click outside to close panel
 	useEffect(() => {
@@ -146,11 +131,11 @@ export function ImagePreferences({
 											</TooltipContent>
 										</Tooltip>
 									</TooltipProvider>
-								);
-							})}
+									);
+								})}
+							</div>
 						</div>
-					</div>
-				)}
+					)}
 			</div>
 		</div>
 	);

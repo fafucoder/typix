@@ -7,9 +7,7 @@ import type {
 } from "../types/provider";
 import {
 	type ProviderSettingsType,
-	chooseAblility,
 	doParseSettings,
-	findModel,
 } from "../types/provider";
 
 const qwenSettingsSchema = [
@@ -40,26 +38,8 @@ const Qwen: AiProvider = {
 	id: "qwen",
 	name: "Qwen",
 	supportCors: false,
-	enabledByDefault: true,
 	settings: qwenSettingsSchema,
-	models: [
-		{
-			id: "qwen-image",
-			name: "Qwen Image",
-			ability: "i2i",
-			maxInputImages: 3,
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-		{
-			id: "qwen-image-max",
-			name: "Qwen Image Max",
-			ability: "t2i",
-			maxInputImages: 0,
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		}
-	],
+
 	parseSettings: <QwenSettings>(settings: ApiProviderSettings) => {
 		return doParseSettings(settings, qwenSettingsSchema) as QwenSettings;
 	},

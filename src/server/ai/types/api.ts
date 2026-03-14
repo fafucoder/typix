@@ -1,5 +1,6 @@
 import type { ErrorReason } from "@/server/db/schemas";
 import z from "zod/v4";
+import type { AiModel } from "./model";
 
 // Define supported aspect ratios array
 const aspectRatios = ["1:1", "16:9", "9:16", "4:3", "3:4"] as const;
@@ -22,7 +23,9 @@ export const TypixGenerateRequestSchema = z.object({
 	aspectRatio: z.enum(aspectRatios).optional(), // Optional aspect ratio
 });
 
-export type TypixGenerateRequest = z.infer<typeof TypixGenerateRequestSchema>;
+export type TypixGenerateRequest = z.infer<typeof TypixGenerateRequestSchema> & {
+	model: AiModel; // AI model information
+};
 
 export type TypixChatApiResponse = {
 	errorReason?: ErrorReason; // Optional error reason if generation failed

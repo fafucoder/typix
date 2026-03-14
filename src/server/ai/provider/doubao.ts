@@ -6,9 +6,7 @@ import type {
 } from "../types/provider";
 import {
   type ProviderSettingsType,
-  chooseAblility,
   doParseSettings,
-  findModel,
 } from "../types/provider";
 
 const doubaoSettingsSchema = [
@@ -39,18 +37,8 @@ const Doubao: AiProvider = {
   id: "doubao",
   name: "Doubao",
   supportCors: false,
-  enabledByDefault: true,
   settings: doubaoSettingsSchema,
-  models: [
-    {
-      id: "doubao-seedream-4-5-251128",
-      name: "SeedDream4.5",
-      ability: "i2i",
-      maxInputImages: 14,
-      enabledByDefault: true,
-      supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-    },
-  ],
+
   parseSettings: <DoubaoSettings>(settings: ApiProviderSettings) => {
     return doParseSettings(settings, doubaoSettingsSchema) as DoubaoSettings;
   },
@@ -65,11 +53,6 @@ const Doubao: AiProvider = {
     }
 
     try {
-      const ability = chooseAblility(
-        request,
-        findModel(Doubao, request.modelId).ability
-      );
-
       let response: Response;
       const requestBody: any = {
         model,

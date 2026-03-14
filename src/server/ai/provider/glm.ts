@@ -6,9 +6,7 @@ import type {
 } from "../types/provider";
 import {
   type ProviderSettingsType,
-  chooseAblility,
   doParseSettings,
-  findModel,
 } from "../types/provider";
 
 const glmSettingsSchema = [
@@ -39,26 +37,8 @@ const Glm: AiProvider = {
   id: "glm",
   name: "GLM (智谱AI)",
   supportCors: false,
-  enabledByDefault: true,
   settings: glmSettingsSchema,
-  models: [
-    {
-      id: "cogview-3-plus",
-      name: "CogView-3-Plus",
-      ability: "t2i",
-      maxInputImages: 0,
-      enabledByDefault: true,
-      supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-    },
-    {
-      id: "cogview-3",
-      name: "CogView-3",
-      ability: "t2i",
-      maxInputImages: 0,
-      enabledByDefault: false,
-      supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-    },
-  ],
+
   parseSettings: <GlmSettings>(settings: ApiProviderSettings) => {
     return doParseSettings(settings, glmSettingsSchema) as GlmSettings;
   },
@@ -73,10 +53,8 @@ const Glm: AiProvider = {
     }
 
     try {
-      const ability = chooseAblility(
-        request,
-        findModel(Glm, request.modelId).ability
-      );
+      // Get ability from request.model
+      const ability = request.model?.ability || "t2i";
 
       let response: Response;
       

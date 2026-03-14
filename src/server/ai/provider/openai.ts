@@ -1,7 +1,7 @@
 import { base64ToDataURI, fetchUrlToDataURI } from "@/server/lib/util";
 import openai from "openai";
 import type { AiProvider, ApiProviderSettings, ApiProviderSettingsItem } from "../types/provider";
-import { type ProviderSettingsType, chooseAblility, doParseSettings, findModel } from "../types/provider";
+import { type ProviderSettingsType, doParseSettings } from "../types/provider";
 
 // Convert DataURI base64 string to FsReadStream compatible format
 function createImageStreamFromDataUri(dataUri: string) {
@@ -66,18 +66,8 @@ const OpenAI: AiProvider = {
 	id: "openai",
 	name: "OpenAI",
 	supportCors: true,
-	enabledByDefault: true,
 	settings: openAISettingsSchema,
-	models: [
-		{
-			id: "gpt-image-1",
-			name: "GPT Image 1",
-			ability: "i2i",
-			maxInputImages: 3,
-			enabledByDefault: true,
-			supportedAspectRatios: ["1:1", "16:9", "9:16", "4:3", "3:4"],
-		},
-	],
+
 	parseSettings: <OpenAISettings>(settings: ApiProviderSettings) => {
 		return doParseSettings(settings, openAISettingsSchema) as OpenAISettings;
 	},
@@ -92,7 +82,10 @@ const OpenAI: AiProvider = {
 			size = aspectRatioSizes[request.aspectRatio];
 		}
 		try {
-			switch (chooseAblility(request, findModel(OpenAI, request.modelId).ability)) {
+			// Get ability from request.model
+			const ability = request.model?.ability || "t2i";
+
+			switch (ability) {
 				case "t2i":
 					// Text-to-image generation
 					generateResult = await client.images.generate({

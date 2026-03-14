@@ -34,7 +34,10 @@ export const aiModels = mysqlTable(
 		name: varchar("name", { length: 255 }), // Model display name
 		type: varchar("type", { length: 20, enum: modelTypes }).notNull(), // Model type: text2image or text2video
 		enabled: int("enabled").default(1).notNull(), // Whether the model is enabled (1=true, 0=false)
+		maxInputImages: int("max_input_images"), // Maximum number of input images supported (for i2i models)
 		sort: int("sort").default(0).notNull(), // Sort order
+		ability: varchar("ability", { length: 20, enum: ["t2i", "i2i"] }).notNull(), // Model image generation ability
+		supportedAspectRatios: text("supported_aspect_ratios"), // Supported aspect ratios for the model
 		createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
 		updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 	},

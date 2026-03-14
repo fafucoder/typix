@@ -225,6 +225,16 @@ function ChatPageContent() {
 		}
 	};
 
+	// Get current model info from providers
+	const currentProviderId = currentChat?.provider || selectedProvider;
+	const currentModelId = currentChat?.model || selectedModel;
+	const currentModelInfo = (() => {
+		if (!currentProviderId || !currentModelId || !providers) return null;
+		const provider = providers.find((p) => p.id === currentProviderId);
+		if (!provider) return null;
+		return provider.models.find((m) => m.id === currentModelId);
+	})();
+
 	return (
 		<div className="flex h-full">
 			{" "}
@@ -272,8 +282,11 @@ function ChatPageContent() {
 				<ChatInput
 					onSendMessage={handleSendMessage}
 					disabled={isGenerating}
-					currentProvider={currentChat?.provider || selectedProvider}
-					currentModel={currentChat?.model || selectedModel}
+					currentProvider={currentProviderId}
+					currentModel={currentModelId}
+					currentModelAbility={currentModelInfo?.ability || null}
+					currentModelMaxInputImages={currentModelInfo?.maxInputImages}
+					supportedAspectRatios={currentModelInfo?.supportedAspectRatios}
 				/>
 			</div>
 		</div>
