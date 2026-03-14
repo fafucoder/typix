@@ -1,5 +1,5 @@
 import { SettingsPageLayout } from "@/app/routes/settings/-components/SettingsPageLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useOrderService } from "@/app/lib/service/order";
@@ -28,6 +28,7 @@ function OrdersPage() {
 	const { isLogin } = useAuth();
 	const [page, setPage] = useState(1);
 	const [searchTerm, setSearchTerm] = useState("");
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
 	const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
 	const [showDetailDialog, setShowDetailDialog] = useState(false);
@@ -35,8 +36,16 @@ function OrdersPage() {
 	const orderService = useOrderService();
 	const subscribeService = useSubscribeService();
 
+	// 防抖处理搜索词
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+		}, 500);
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
+
 	// 获取订单数据
-		const { data: ordersData, isLoading: ordersLoading, error: ordersError } = orderService.getOrders(page, pageSize, searchTerm, statusFilter).swr(isLogin ? `orders-${page}-${searchTerm}-${statusFilter}` : null);
+		const { data: ordersData, isLoading: ordersLoading, error: ordersError } = orderService.getOrders(page, pageSize, debouncedSearchTerm, statusFilter).swr(isLogin ? `orders-${page}-${debouncedSearchTerm}-${statusFilter}` : null);
 	
 	// 获取当前订阅状态
 	const { data: currentSubscription, isLoading: subscribeLoading, error: subscribeError } = subscribeService.getCurrentSubscription.swr(isLogin ? "current-subscription" : null);
