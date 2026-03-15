@@ -14,6 +14,7 @@ export const aiProviders = mysqlTable(
 		secretKey: varchar("secret_key", { length: 255 }), // API secret key (encrypted)
 		enabled: int("enabled").default(1).notNull(), // Whether the provider is enabled (1=true, 0=false)
 		settings: text("settings"), // Provider-specific settings as JSON
+		sort: int("sort").default(0).notNull(), // Sort order for drag-and-drop
 		createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
 		updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 	},

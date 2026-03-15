@@ -14,6 +14,7 @@ import {
   Video,
   Home,
   AlertTriangle,
+  GripVertical,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -73,6 +74,10 @@ function AIProvidersPage() {
   })
   
   const [showSecretKey, setShowSecretKey] = useState(false)
+  
+  // Drag and drop states
+  const [draggedItem, setDraggedItem] = useState<string | null>(null)
+  const [dragOverItem, setDragOverItem] = useState<string | null>(null)
 
   // Load providers
   useState(() => {
@@ -301,6 +306,78 @@ function AIProvidersPage() {
     provider.name.toLowerCase().includes(search.toLowerCase()) ||
     provider.providerId.toLowerCase().includes(search.toLowerCase())
   )
+  
+  // Sort providers by sort field
+  const sortedProviders = [...filteredProviders].sort((a, b) => (b.sort || 0) - (a.sort || 0))
+
+  // Handle drag start
+  const handleDragStart = (e: React.DragEvent, providerId: string) => {
+    setDraggedItem(providerId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  // Handle drag over
+  const handleDragOver = (e: React.DragEvent, providerId: string) => {
+    e.preventDefault()
+    if (draggedItem !== providerId) {
+      setDragOverItem(providerId)
+    }
+  }
+
+  // Handle drag leave
+  const handleDragLeave = () => {
+    setDragOverItem(null)
+  }
+
+  // Handle drop
+  const handleDrop = async (e: React.DragEvent, targetProviderId: string) => {
+    e.preventDefault()
+    setDragOverItem(null)
+    
+    if (!draggedItem || draggedItem === targetProviderId) {
+      setDraggedItem(null)
+      return
+    }
+
+    try {
+      // Reorder providers locally
+      const newProviders = [...providers]
+      const draggedIndex = newProviders.findIndex(p => p.id === draggedItem)
+      const targetIndex = newProviders.findIndex(p => p.id === targetProviderId)
+      
+      if (draggedIndex === -1 || targetIndex === -1) return
+      
+      const removed = newProviders[draggedIndex]
+      if (!removed) return
+      
+      newProviders.splice(draggedIndex, 1)
+      newProviders.splice(targetIndex, 0, removed)
+      
+      // Update sort values for all providers (larger sort value = higher position)
+      const totalCount = newProviders.length
+      const updatedProviders = newProviders.map((provider, index) => ({
+        ...provider,
+        sort: totalCount - index - 1
+      }))
+      
+      setProviders(updatedProviders)
+      
+      // Update all providers' sort on server
+      await Promise.all(
+        updatedProviders.map(provider => 
+          aiService.updateProviderSort(provider.id, provider.sort)
+        )
+      )
+      toast.success('排序已更新')
+    } catch (error) {
+      toast.error('排序更新失败')
+      // Refresh providers to reset state
+      const data = await aiService.getProviders()
+      setProviders(data)
+    } finally {
+      setDraggedItem(null)
+    }
+  }
 
   return (
     <>
@@ -374,44 +451,60 @@ function AIProvidersPage() {
                   没有找到匹配的提供商
                 </div>
               ) : (
-                filteredProviders.map((provider) => (
+                sortedProviders.map((provider) => (
                   <Fragment key={provider.id}>
-                    <button
-                      type='button'
+                    <div
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, provider.id)}
+                      onDragOver={(e) => handleDragOver(e, provider.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, provider.id)}
                       className={cn(
-                        'group hover:bg-accent hover:text-accent-foreground',
-                        `flex w-full rounded-md px-2 py-2 text-start text-sm`,
-                        selectedProvider?.id === provider.id && 'sm:bg-muted'
+                        'group cursor-move',
+                        dragOverItem === provider.id && 'border-t-2 border-primary',
+                        draggedItem === provider.id && 'opacity-50'
                       )}
-                      onClick={() => {
-                        setSelectedProvider(provider)
-                        setMobileSelectedProvider(provider)
-                        setFormData({
-                        name: provider.name,
-                        providerId: provider.providerId,
-                        endpoints: provider.endpoints || '',
-                        secretKey: provider.secretKey || '',
-                        settings: provider.settings || '',
-                      })
-                      }}
                     >
-                      <div className='flex items-center justify-between w-full'>
-                        <div className='flex items-center gap-3'>
-                          <div className='flex h-10 w-10 items-center justify-center rounded-full bg-muted'>
-                            <ProviderIcon provider={provider.providerId} size={24} />
+                      <button
+                        type='button'
+                        className={cn(
+                          'hover:bg-accent hover:text-accent-foreground',
+                          `flex w-full rounded-md px-2 py-2 text-start text-sm`,
+                          selectedProvider?.id === provider.id && 'sm:bg-muted'
+                        )}
+                        onClick={() => {
+                          setSelectedProvider(provider)
+                          setMobileSelectedProvider(provider)
+                          setFormData({
+                          name: provider.name,
+                          providerId: provider.providerId,
+                          endpoints: provider.endpoints || '',
+                          secretKey: provider.secretKey || '',
+                          settings: provider.settings || '',
+                        })
+                        }}
+                      >
+                        <div className='flex items-center justify-between w-full'>
+                          <div className='flex items-center gap-3'>
+                            <div className='flex items-center gap-2'>
+                              <GripVertical size={16} className='text-muted-foreground cursor-grab active:cursor-grabbing' />
+                              <div className='flex h-10 w-10 items-center justify-center rounded-full bg-muted'>
+                                <ProviderIcon provider={provider.providerId} size={24} />
+                              </div>
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                              <span className='block font-medium truncate'>{provider.name}</span>
+                              <span className='block text-xs text-muted-foreground truncate'>{provider.providerId}</span>
+                            </div>
                           </div>
-                          <div className='flex-1 min-w-0'>
-                            <span className='block font-medium truncate'>{provider.name}</span>
-                            <span className='block text-xs text-muted-foreground truncate'>{provider.providerId}</span>
-                          </div>
+                          <Switch
+                            checked={Boolean(provider.enabled)}
+                            onCheckedChange={() => handleToggleProvider(provider.id)}
+                            className='data-[state=checked]:bg-primary'
+                          />
                         </div>
-                        <Switch
-                          checked={Boolean(provider.enabled)}
-                          onCheckedChange={() => handleToggleProvider(provider.id)}
-                          className='data-[state=checked]:bg-primary'
-                        />
-                      </div>
-                    </button>
+                      </button>
+                    </div>
                     <Separator className='my-1' />
                   </Fragment>
                 ))

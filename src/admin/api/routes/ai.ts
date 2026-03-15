@@ -138,6 +138,16 @@ const app = new Hono<Env>()
 		}
 		return c.json(ok({ enabled: result.enabled }));
 	})
+	// Update provider sort order
+	.patch("/providers/:id/sort", zValidator("json", z.object({ sort: z.number() })), async (c) => {
+		const id = c.req.param("id");
+		const { sort } = c.req.valid("json");
+		const result = await aiService.updateProviderSort(id, sort);
+		if (!result.success) {
+			return c.json({ code: "error", message: result.error }, 400);
+		}
+		return c.json(ok({ success: true }));
+	})
 	// Toggle model enabled status
 	.patch("/models/:id/toggle", async (c) => {
 		const id = c.req.param("id");

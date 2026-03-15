@@ -1,5 +1,5 @@
 import { aiProviders, aiModels, type ModelType } from "@/admin/db/schemas/ai";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 import { getContext } from "@/admin/service/context";
 import { randomBytes } from "node:crypto";
 import type { MySql2Database } from "drizzle-orm/mysql2";
@@ -40,6 +40,7 @@ interface ProviderResult {
 	secretKey: string | null;
 	enabled: number;
 	settings: string | null;
+	sort: number;
 	createdAt: Date;
 	updatedAt: Date;
 	models?: ModelResult[];
@@ -87,7 +88,7 @@ const decryptProviderSecretKey = (provider: any): ProviderResult => {
 const getProviders = async (): Promise<{ success: boolean; providers?: ProviderResult[]; error?: string }> => {
 	const db = getDb();
 	try {
-		const providers = await db.select().from(aiProviders).orderBy(desc(aiProviders.createdAt));
+		const providers = await db.select().from(aiProviders).orderBy(desc(aiProviders.sort), desc(aiProviders.createdAt));
 		
 		// Get models for each provider and decrypt secretKey
 		const providersWithModels = await Promise.all(
@@ -231,6 +232,21 @@ const toggleProviderEnabled = async (id: string): Promise<{ success: boolean; en
 	} catch (error: any) {
 		console.error("Toggle provider error:", error);
 		return { success: false, error: error.message || "Failed to toggle provider" };
+	}
+};
+
+const updateProviderSort = async (id: string, sort: number): Promise<{ success: boolean; error?: string }> => {
+	const db = getDb();
+	try {
+		await db
+			.update(aiProviders)
+			.set({ sort, updatedAt: new Date() })
+			.where(eq(aiProviders.id, id));
+		
+		return { success: true };
+	} catch (error: any) {
+		console.error("Update provider sort error:", error);
+		return { success: false, error: error.message || "Failed to update provider sort" };
 	}
 };
 
@@ -381,6 +397,7 @@ class AiService {
 	updateProvider = updateProvider;
 	deleteProvider = deleteProvider;
 	toggleProviderEnabled = toggleProviderEnabled;
+	updateProviderSort = updateProviderSort;
 	
 	// Model methods
 	getModels = getModels;

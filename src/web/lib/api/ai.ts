@@ -9,6 +9,7 @@ export interface AiProvider {
 	secretKey: string | null
 	enabled: number | boolean
 	settings: string | null
+	sort: number
 	createdAt: string
 	updatedAt: string
 	models?: AiModel[]
@@ -116,6 +117,13 @@ export const aiService = {
 		})
 		const result: any = await response.json()
 		return { enabled: result.data?.enabled || false }
+	},
+
+	updateProviderSort: async (id: string, sort: number): Promise<void> => {
+		await apiClient.api.admin.ai.providers[':id'].sort.$patch({
+			param: { id },
+			json: { sort },
+		})
 	},
 
 	// Model APIs
