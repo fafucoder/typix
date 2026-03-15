@@ -1,12 +1,9 @@
-import { mysqlTable, varchar, int, timestamp, text, mysqlEnum } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, int, timestamp, text, mysqlEnum, index } from "drizzle-orm/mysql-core";
 import { user } from "./auth";
 import { subscribe } from "./admin";
 
 const orderStatus = ["pending", "paid", "cancelled", "refunded", "expired"] as const;
 export type OrderStatus = (typeof orderStatus)[number];
-
-const paymentMethod = ["alipay", "wechat", "stripe", "paypal", "credit_card", "bank_transfer", "other"] as const;
-export type PaymentMethod = (typeof paymentMethod)[number];
 
 export const order = mysqlTable("order", {
 	id: varchar("id", { length: 255 }).primaryKey(),
@@ -18,22 +15,17 @@ export const order = mysqlTable("order", {
 		.references(() => subscribe.id, { onDelete: "restrict" }),
 	orderNo: varchar("order_no", { length: 64 }).notNull().unique(),
 	type: varchar("type", { length: 20 }).notNull(),
-	amount: int("amount").notNull(),
+	totalAmount: int("total_amount").notNull(),
+	discountAmount: int("discount_amount").default(0).notNull(),
+	actualAmount: int("actual_amount").notNull(),
 	currency: varchar("currency", { length: 10 }).default("CNY").notNull(),
+	couponId: varchar("coupon_id", { length: 255 }),
 	status: varchar("status", { length: 20, enum: orderStatus })
 		.$defaultFn(() => "pending")
 		.notNull(),
-	paymentMethod: varchar("payment_method", { length: 20, enum: paymentMethod }),
-	paymentId: varchar("payment_id", { length: 255 }),
-	clientIp: varchar("client_ip", { length: 64 }),
-	userAgent: text("user_agent"),
 	remark: text("remark"),
-	paidAt: timestamp("paid_at"),
 	expiresAt: timestamp("expires_at"),
 	cancelledAt: timestamp("cancelled_at"),
-	refundedAt: timestamp("refunded_at"),
-	refundAmount: int("refund_amount"),
-	refundReason: text("refund_reason"),
 	createdAt: timestamp("created_at")
 		.$defaultFn(() => /* @__PURE__ */ new Date())
 		.notNull(),
@@ -41,4 +33,6 @@ export const order = mysqlTable("order", {
 		.$defaultFn(() => /* @__PURE__ */ new Date())
 		.notNull(),
 	deletedAt: timestamp("deleted_at"),
-});
+}, (t) => [
+	index("idx_coupon_id").on(t.couponId),
+]);

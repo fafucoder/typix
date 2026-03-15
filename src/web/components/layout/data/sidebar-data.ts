@@ -11,6 +11,7 @@ import {
   Sparkles,
   Ticket,
   Shield,
+  ShoppingCart,
 } from 'lucide-react'
 
 import { type SidebarData } from '../types'
@@ -44,6 +45,11 @@ export const sidebarData: SidebarData = {
           title: '优惠券管理',
           url: '/coupons',
           icon: Ticket,
+        },
+        {
+          title: '订阅管理',
+          url: '/orders',
+          icon: ShoppingCart,
         },
         {
           title: '用户管理',
