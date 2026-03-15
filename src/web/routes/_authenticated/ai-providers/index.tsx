@@ -15,10 +15,10 @@ import {
   Home,
   AlertTriangle,
 } from 'lucide-react'
-import { ModelIcon as LobeModelIcon } from '@lobehub/icons'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -35,8 +35,6 @@ import { toast } from 'sonner'
 import { useRouter } from '@tanstack/react-router'
 import { aiService, type AiProvider, type AiModel } from '@/lib/api/ai'
 import ProviderIcon from '@/components/icon/ProviderIcon'
-
-
 
 function AIProvidersPage() {
   const router = useRouter()
@@ -63,6 +61,7 @@ function AIProvidersPage() {
     providerId: '',
     endpoints: '',
     secretKey: '',
+    settings: '',
   })
   
   const [modelFormData, setModelFormData] = useState({
@@ -90,6 +89,7 @@ function AIProvidersPage() {
             providerId: firstProvider.providerId,
             endpoints: firstProvider.endpoints || '',
             secretKey: firstProvider.secretKey || '',
+            settings: firstProvider.settings || '',
           })
         }
       } catch (error) {
@@ -113,7 +113,7 @@ function AIProvidersPage() {
       const newProvider = data.find(p => p.id === result.id) || data[0]
       setSelectedProvider(newProvider || null)
       setIsCreateDialogOpen(false)
-      setFormData({ name: '', providerId: '', endpoints: '', secretKey: '' })
+      setFormData({ name: '', providerId: '', endpoints: '', secretKey: '', settings: '' })
     } catch (error) {
       toast.error('创建失败，请稍后重试')
     }
@@ -328,7 +328,7 @@ function AIProvidersPage() {
                   size='icon'
                   variant='ghost'
                   onClick={() => {
-                    setFormData({ name: '', providerId: '', endpoints: '', secretKey: '' })
+                    setFormData({ name: '', providerId: '', endpoints: '', secretKey: '', settings: '' })
                     setIsCreateDialogOpen(true)
                   }}
                   className='rounded-lg'
@@ -391,6 +391,7 @@ function AIProvidersPage() {
                         providerId: provider.providerId,
                         endpoints: provider.endpoints || '',
                         secretKey: provider.secretKey || '',
+                        settings: provider.settings || '',
                       })
                       }}
                     >
@@ -525,6 +526,17 @@ function AIProvidersPage() {
                           {showSecretKey ? <EyeOff size={16} /> : <Eye size={16} />}
                         </Button>
                       </div>
+                    </div>
+                    
+                    <div className='space-y-2'>
+                      <Label htmlFor='settings'>Settings 配置</Label>
+                      <Textarea
+                        id='settings'
+                        value={selectedProvider.settings || ''}
+                        readOnly
+                        className='bg-muted resize-none overflow-hidden whitespace-pre-wrap break-all'
+                        rows={4}
+                      />
                     </div>
                   </div>
                 </div>
@@ -735,6 +747,17 @@ function AIProvidersPage() {
                     required
                   />
                 </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='settings'>Settings 配置</Label>
+                  <Textarea
+                    id='settings'
+                    value={formData.settings}
+                    onChange={(e) => setFormData({ ...formData, settings: e.target.value })}
+                    placeholder='请输入 JSON 格式的配置'
+                    rows={4}
+                    className='resize-none overflow-hidden whitespace-pre-wrap break-all'
+                  />
+                </div>
                 <div className='flex justify-end gap-2'>
                   <Button type='button' variant='ghost' onClick={() => setIsCreateDialogOpen(false)}>
                     取消
@@ -787,6 +810,17 @@ function AIProvidersPage() {
                     value={formData.secretKey}
                     onChange={(e) => setFormData({ ...formData, secretKey: e.target.value })}
                     required
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='edit-settings'>Settings 配置</Label>
+                  <Textarea
+                    id='edit-settings'
+                    value={formData.settings}
+                    onChange={(e) => setFormData({ ...formData, settings: e.target.value })}
+                    placeholder='请输入 JSON 格式的配置'
+                    rows={4}
+                    className='resize-none overflow-hidden whitespace-pre-wrap break-all'
                   />
                 </div>
                 <div className='flex justify-end gap-2'>
