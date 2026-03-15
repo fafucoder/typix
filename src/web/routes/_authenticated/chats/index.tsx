@@ -83,7 +83,7 @@ function ChatsPage() {
         setPage(currentPage + 1)
       }
     } catch (error) {
-      toast.error('加载聊天列表失败')
+      toast.error('加载创作列表失败')
     } finally {
       setIsLoading(false)
       setIsLoadingMore(false)
@@ -97,7 +97,7 @@ function ChatsPage() {
       setSelectedChat(result.chat)
       setSelectedChatMessages(result.messages)
     } catch (error) {
-      toast.error('加载聊天详情失败')
+      toast.error('加载创作详情失败')
     } finally {
       setIsLoading(false)
     }
@@ -177,7 +177,7 @@ function ChatsPage() {
                 <div className='relative'>
                   <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
                   <Input
-                    placeholder='搜索聊天或用户名...'
+                    placeholder='搜索创作或用户名...'
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value)
@@ -198,7 +198,7 @@ function ChatsPage() {
                 <div className='flex h-full items-center justify-center text-muted-foreground'>
                   <div className='text-center'>
                     <MessageSquare size={48} className='mx-auto mb-2 opacity-50' />
-                    <p>暂无聊天记录</p>
+                    <p>暂无创作记录</p>
                   </div>
                 </div>
               ) : (
@@ -291,7 +291,7 @@ function ChatsPage() {
                     <div className='flex h-full items-center justify-center text-muted-foreground'>
                       <div className='text-center'>
                         <MessageSquare size={48} className='mx-auto mb-2 opacity-30' />
-                        <p>该聊天暂无消息</p>
+                        <p>该创作暂无记录</p>
                       </div>
                     </div>
                   ) : (
@@ -367,7 +367,7 @@ function ChatsPage() {
               <div className='flex flex-1 items-center justify-center text-muted-foreground'>
                 <div className='text-center'>
                   <MessageSquare size={64} className='mx-auto mb-4 opacity-30' />
-                  <p>点击左侧聊天查看详情</p>
+                  <p>点击左侧创作查看详情</p>
                 </div>
               </div>
             )}
@@ -381,16 +381,16 @@ function ChatsPage() {
         title={
           <div className='flex items-center gap-2 text-destructive'>
             <AlertTriangle size={20} />
-            删除聊天
+            删除创作
           </div>
         }
         desc={
           <div className='space-y-3'>
             <p>
-              确定要删除聊天 <strong>{chatToDelete?.title}</strong> 吗？
+              确定要删除创作 <strong>{chatToDelete?.title}</strong> 吗？
             </p>
             <p className='text-sm text-muted-foreground'>
-              此操作将永久删除该聊天记录，无法撤销。
+              此操作将永久删除该创作记录，无法撤销。
             </p>
           </div>
         }
