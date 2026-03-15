@@ -17,6 +17,7 @@ import couponRouter from "./routes/coupon";
 import subscribeModelRouter from "./routes/subscribe-model";
 import orderRouter from "./routes/order";
 import chatRouter from "./routes/chat";
+import fileRouter from "./routes/file";
 import type { ApiResult, Env } from "./util";
 
 const factory = createFactory<Env>({
@@ -194,7 +195,16 @@ app.onError((err, c) => {
 	});
 });
 
-const route = app.basePath("/api").route("/", adminRouter).route("/", userRouter).route("/", subscribeRouter).route("/", couponRouter).route("/", subscribeModelRouter).route("/", orderRouter).route("/", chatRouter);
+const route = app
+	.basePath("/api")
+	.route("/", adminRouter)
+	.route("/", userRouter)
+	.route("/", subscribeRouter)
+	.route("/", couponRouter)
+	.route("/", subscribeModelRouter)
+	.route("/", orderRouter)
+	.route("/", chatRouter)
+	.route("/", fileRouter);
 
 export type AppType = typeof route;
 export default app;

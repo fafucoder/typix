@@ -1,8 +1,9 @@
 import { eq, like, or, and, desc, sql } from "drizzle-orm";
 import { getContext } from "./context";
-import { chats, messages, messageGenerations } from "@/admin/db/schemas/chat";
+import { chats, messages, messageGenerations, messageAttachments } from "@/admin/db/schemas/chat";
 import { user } from "@/admin/db/schemas/auth";
 import { files } from "@/admin/db/schemas/file";
+import { getFileUrl } from "./storage";
 
 export interface Chat {
 	id: string;
@@ -10,6 +11,7 @@ export interface Chat {
 	userId: string;
 	provider: string;
 	model: string;
+	type: string;
 	createdAt: string;
 	updatedAt: string;
 	user?: { id: string; name: string; email: string };
@@ -20,15 +22,21 @@ export interface Message {
 	chatId: string;
 	content: string;
 	role: "user" | "assistant";
-	type: "text" | "image";
+	type: string;
 	createdAt: string;
 	updatedAt: string;
 	generation?: {
 		id: string;
 		status: string;
 		fileIds?: string[];
+		resultUrls?: string[];
 		errorReason?: string;
 	};
+	attachments?: {
+		id: string;
+		type: string;
+		url: string;
+	}[];
 }
 
 export interface ChatListParams {
@@ -140,6 +148,7 @@ export const chatService = {
 				userId: chatRow.userId,
 				provider: chatRow.provider,
 				model: chatRow.model,
+				type: chatRow.type,
 				createdAt: chatRow.createdAt.toISOString(),
 				updatedAt: chatRow.updatedAt.toISOString(),
 				user: userResults.length > 0 ? userResults[0] : undefined,
@@ -158,31 +167,78 @@ export const chatService = {
 				if (g.length > 0) generationMap.set(g[0].id, g[0]);
 			}
 
-			const formattedMessages: Message[] = messageResults.map((row) => {
-				const generation = row.generationId ? generationMap.get(row.generationId) : undefined;
-				return {
-					id: row.id,
-					chatId: row.chatId,
-					content: row.content,
-					role: row.role,
-					type: row.type,
-					createdAt: row.createdAt.toISOString(),
-					updatedAt: row.updatedAt.toISOString(),
-					generation: generation ? {
-						id: generation.id,
-						status: generation.status,
-						fileIds: (() => {
-							try {
-								return generation.fileIds ? JSON.parse(generation.fileIds) : undefined;
-							} catch (e) {
-								console.error("Failed to parse fileIds:", e);
-								return undefined;
-							}
-						})(),
-						errorReason: generation.errorReason,
-					} : undefined,
-				};
-			});
+			// Get all message IDs for fetching attachments
+			const messageIds = messageResults.map(m => m.id);
+			const attachmentsResults = messageIds.length > 0
+				? await db.select().from(messageAttachments).where(eq(messageAttachments.messageId, messageIds[0]))
+				: [];
+			const attachmentsMap = new Map<string, typeof attachmentsResults>();
+			for (const attachment of attachmentsResults) {
+				if (!attachmentsMap.has(attachment.messageId)) {
+					attachmentsMap.set(attachment.messageId, []);
+				}
+				attachmentsMap.get(attachment.messageId)!.push(attachment);
+			}
+			// Fetch remaining attachments for other messages
+			for (let i = 1; i < messageIds.length; i++) {
+				const msgAttachments = await db.select().from(messageAttachments).where(eq(messageAttachments.messageId, messageIds[i]));
+				attachmentsMap.set(messageIds[i], msgAttachments);
+			}
+
+			const formattedMessages: Message[] = await Promise.all(
+				messageResults.map(async (row) => {
+					const generation = row.generationId ? generationMap.get(row.generationId) : undefined;
+					
+					// Parse fileIds from JSON string or plain string
+					let fileIds: string[] | null = null;
+					if (generation?.fileIds) {
+						try {
+							const parsed = JSON.parse(generation.fileIds);
+							fileIds = Array.isArray(parsed) ? parsed : [parsed];
+						} catch {
+							// If JSON parse fails, treat it as a single file ID
+							fileIds = [generation.fileIds];
+						}
+					}
+
+					// Process attachments for user messages
+					const msgAttachments = attachmentsMap.get(row.id) || [];
+					const attachmentUrls = await Promise.all(
+						msgAttachments.map(async (attachment) => {
+							const url = await getFileUrl(attachment.fileId, chatRow.userId);
+							return {
+								id: attachment.id,
+								type: attachment.type,
+								url: url || '',
+							};
+						}),
+					);
+
+					return {
+						id: row.id,
+						chatId: row.chatId,
+						content: row.content,
+						role: row.role,
+						type: row.type,
+						createdAt: row.createdAt.toISOString(),
+						updatedAt: row.updatedAt.toISOString(),
+						generation: generation ? {
+							id: generation.id,
+							status: generation.status,
+							fileIds: fileIds || undefined,
+							resultUrls: fileIds
+							? await Promise.all(
+									fileIds.map(async (fileId) => {
+										return await getFileUrl(fileId, chatRow.userId);
+									}),
+								)
+							: undefined,
+							errorReason: generation.errorReason,
+						} : undefined,
+						attachments: attachmentUrls.length > 0 ? attachmentUrls : undefined,
+					};
+				}),
+			);
 
 			return { success: true, chat: formattedChat, messages: formattedMessages };
 		} catch (error) {
