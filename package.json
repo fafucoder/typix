@@ -18,13 +18,8 @@
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
-		"db:admin:generate": "DRIZZLE_TARGET=admin drizzle-kit generate",
-		"db:admin:migrate": "DRIZZLE_TARGET=admin drizzle-kit migrate",
-		"db:admin:push": "DRIZZLE_TARGET=admin drizzle-kit push",
 		"db:migrate:dev:worker": "wrangler d1 migrations apply --local typix",
 		"db:migrate:worker": "wrangler d1 migrations apply --remote typix",
-		"create-admin": "npx tsx scripts/create-admin.ts",
-		"init:super-admin": "npx tsx scripts/init-super-admin.ts",
 		"deploy": "npm run db:migrate:worker && wrangler deploy",
 		"deploy:no-migrate": "wrangler deploy"
 	},
