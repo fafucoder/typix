@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { Image as ImageIcon, Video, Loader2, Wand2, Search as SearchIcon, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Header } from '@/components/layout/header'
@@ -14,6 +13,7 @@ import { Search } from '@/components/search'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { toast } from 'sonner'
 import { creationService, type Creation } from '@/lib/api/creation'
+import ProviderIcon from '@/components/icon/ProviderIcon'
 
 export const Route = createFileRoute('/_authenticated/creations/')({
   component: CreationsPage,

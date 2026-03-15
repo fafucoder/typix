@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { chatService, type Chat, type Message } from '@/lib/api/chat'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { AlertTriangle } from 'lucide-react'
+import ProviderIcon from '@/components/icon/ProviderIcon'
 
 export const Route = createFileRoute('/_authenticated/chats/')({
   component: ChatsPage,
@@ -186,9 +187,11 @@ function ChatsPage() {
                   <Loader2 className='h-6 w-6 animate-spin' />
                 </div>
               ) : chats.length === 0 ? (
-                <div className='flex flex-col items-center justify-center py-8 text-muted-foreground'>
-                  <MessageSquare size={48} className='mb-2 opacity-50' />
-                  <p>暂无聊天记录</p>
+                <div className='flex h-full items-center justify-center text-muted-foreground'>
+                  <div className='text-center'>
+                    <MessageSquare size={48} className='mx-auto mb-2 opacity-50' />
+                    <p>暂无聊天记录</p>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -242,10 +245,10 @@ function ChatsPage() {
             </ScrollArea>
           </div>
 
-          <div className='flex flex-1 flex-col border bg-background'>
+          <div className='flex flex-1 flex-col border bg-background overflow-hidden'>
             {selectedChat ? (
               <>
-                <div className='flex items-center justify-between border-b p-3'>
+                <div className='flex items-center justify-between border-b p-3 flex-none'>
                   <div>
                     <h2 className='font-medium text-sm'>{selectedChat.title}</h2>
                     <p className='text-xs text-muted-foreground'>
@@ -254,29 +257,25 @@ function ChatsPage() {
                     </p>
                   </div>
                   <div className='flex items-center gap-2'>
+                    <ProviderIcon provider={selectedChat.provider} size={14} />
                     <span className='text-xs text-muted-foreground'>
-                      {selectedChat.provider}/{selectedChat.model}
+                      {selectedChat.model}
                     </span>
-                    <Button
-                      size='icon'
-                      variant='ghost'
-                      className='h-7 w-7'
-                      onClick={() => handleDelete(selectedChat)}
-                    >
-                      <Trash2 size={14} className='text-destructive' />
-                    </Button>
                   </div>
                 </div>
 
-                <ScrollArea className='flex-1 p-3'>
+                <div className='flex-1 overflow-hidden'>
+                  <ScrollArea className='h-full p-3'>
                   {isLoading ? (
-                    <div className='flex items-center justify-center h-full'>
+                    <div className='flex h-full items-center justify-center'>
                       <Loader2 className='h-6 w-6 animate-spin' />
                     </div>
                   ) : selectedChatMessages.length === 0 ? (
-                    <div className='flex flex-col items-center justify-center h-full text-muted-foreground'>
-                      <MessageSquare size={48} className='mb-2 opacity-30' />
-                      <p>该聊天暂无消息</p>
+                    <div className='flex h-full items-center justify-center text-muted-foreground'>
+                      <div className='text-center'>
+                        <MessageSquare size={48} className='mx-auto mb-2 opacity-30' />
+                        <p>该聊天暂无消息</p>
+                      </div>
                     </div>
                   ) : (
                     <div className='space-y-4'>
@@ -322,7 +321,8 @@ function ChatsPage() {
                       ))}
                     </div>
                   )}
-                </ScrollArea>
+                  </ScrollArea>
+                </div>
               </>
             ) : (
               <div className='flex flex-1 items-center justify-center text-muted-foreground'>
