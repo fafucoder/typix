@@ -5,11 +5,11 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
-		"web": "vite --config vite.web.config.ts",
+		"admin": "vite --config vite.admin.config.ts",
 		"dev:worker": "wrangler dev",
 		"build": "tsc -b && cross-env RUNTIME=cloudflare vite build",
 		"build:node": "tsc -b && vite build && tsup --minify",
-		"build:web": "tsc -b && vite build --config vite.web.config.ts",
+		"build:admin": "tsc -b && vite build --config vite.admin.config.ts",
 		"analyze": "vite build --mode analyze",
 		"fmt": "biome format --write .",
 		"lint": "eslint .",
