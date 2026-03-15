@@ -12,6 +12,7 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { ConfigDrawer } from '@/components/config-drawer'
+import { Search as SearchComponent } from '@/components/search'
 import { toast } from 'sonner'
 import { chatService, type Chat, type Message } from '@/lib/api/chat'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -156,6 +157,7 @@ function ChatsPage() {
   return (
     <>
       <Header>
+        <SearchComponent placeholder='Search' />
         <div className='ms-auto flex items-center space-x-4'>
           <ThemeSwitch />
           <ConfigDrawer />

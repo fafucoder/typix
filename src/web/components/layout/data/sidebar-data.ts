@@ -43,11 +43,6 @@ export const sidebarData: SidebarData = {
           icon: Package,
         },
         {
-          title: '优惠券管理',
-          url: '/coupons',
-          icon: Ticket,
-        },
-        {
           title: '订阅管理',
           url: '/orders',
           icon: ShoppingCart,
@@ -61,6 +56,11 @@ export const sidebarData: SidebarData = {
           title: '创作历史',
           url: '/chats',
           icon: MessageSquare,
+        },
+        {
+          title: '优惠券管理',
+          url: '/coupons',
+          icon: Ticket,
         },
       ],
     },
