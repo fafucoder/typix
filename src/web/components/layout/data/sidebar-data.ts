@@ -12,6 +12,7 @@ import {
   Ticket,
   Shield,
   ShoppingCart,
+  MessageSquare,
 } from 'lucide-react'
 
 import { type SidebarData } from '../types'
@@ -55,6 +56,11 @@ export const sidebarData: SidebarData = {
           title: '用户管理',
           url: '/users',
           icon: Users,
+        },
+        {
+          title: '创作历史',
+          url: '/chats',
+          icon: MessageSquare,
         },
       ],
     },

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
-import { Trash2, Image as ImageIcon, Video, Loader2, Wand2 } from 'lucide-react'
+import { Image as ImageIcon, Video, Loader2, Wand2, Search as SearchIcon, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -14,8 +14,6 @@ import { Search } from '@/components/search'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { toast } from 'sonner'
 import { creationService, type Creation } from '@/lib/api/creation'
-import { ConfirmDialog } from '@/components/confirm-dialog'
-import { AlertTriangle } from 'lucide-react'
 
 export const Route = createFileRoute('/_authenticated/creations/')({
   component: CreationsPage,
@@ -23,53 +21,40 @@ export const Route = createFileRoute('/_authenticated/creations/')({
 
 function CreationsPage() {
   const [creations, setCreations] = useState<Creation[]>([])
+  const [filteredCreations, setFilteredCreations] = useState<Creation[]>([])
   const [selectedCreation, setSelectedCreation] = useState<Creation | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
-  // Delete dialog
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [creationToDelete, setCreationToDelete] = useState<Creation | null>(null)
-
-  // Load creations and providers
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    if (search.trim() === '') {
+      setFilteredCreations(creations)
+    } else {
+      const lowerSearch = search.toLowerCase()
+      setFilteredCreations(
+        creations.filter(
+          (creation) =>
+            creation.title.toLowerCase().includes(lowerSearch) ||
+            creation.prompt.toLowerCase().includes(lowerSearch)
+        )
+      )
+    }
+  }, [search, creations])
 
   const loadData = async () => {
     try {
       setIsLoading(true)
       const creationsData = await creationService.getCreations()
       setCreations(creationsData)
+      setFilteredCreations(creationsData)
     } catch (error) {
       toast.error('加载数据失败')
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const handleDelete = (creation: Creation) => {
-    setCreationToDelete(creation)
-    setIsDeleteDialogOpen(true)
-  }
-
-  const confirmDelete = async () => {
-    if (!creationToDelete) return
-    
-    try {
-      await creationService.deleteCreation(creationToDelete.id)
-      toast.success('删除成功')
-      setIsDeleteDialogOpen(false)
-      setCreationToDelete(null)
-      
-      if (selectedCreation?.id === creationToDelete.id) {
-        setSelectedCreation(null)
-      }
-      
-      // Reload creations
-      const newCreations = await creationService.getCreations()
-      setCreations(newCreations)
-    } catch (error) {
-      toast.error('删除失败')
     }
   }
 
@@ -103,6 +88,16 @@ function CreationsPage() {
     }
   }
 
+  const parseResultUrls = (resultUrls: string | null) => {
+    if (!resultUrls) return []
+    try {
+      return JSON.parse(resultUrls)
+    } catch (e) {
+      console.error('Failed to parse resultUrls:', e)
+      return []
+    }
+  }
+
   return (
     <>
       <Header>
@@ -116,7 +111,6 @@ function CreationsPage() {
 
       <Main fluid>
         <section className='flex h-[calc(100vh-8rem)] gap-6'>
-          {/* Left Side - Creation History */}
           <div className='flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80'>
             <div className='sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none'>
               <div className='flex items-center justify-between py-2'>
@@ -125,6 +119,23 @@ function CreationsPage() {
                   <Wand2 size={20} />
                 </div>
               </div>
+
+              <label
+                className={cn(
+                  'focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden',
+                  'flex h-10 w-full items-center space-x-0 rounded-md border border-border ps-2 mt-2'
+                )}
+              >
+                <SearchIcon size={15} className='me-2 stroke-slate-500' />
+                <span className='sr-only'>Search</span>
+                <input
+                  type='text'
+                  className='w-full flex-1 bg-inherit text-sm focus-visible:outline-hidden'
+                  placeholder='搜索创作...'
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </label>
             </div>
 
             <ScrollArea className='-mx-3 h-full overflow-scroll p-3'>
@@ -132,29 +143,35 @@ function CreationsPage() {
                 <div className='flex items-center justify-center py-8'>
                   <Loader2 className='h-6 w-6 animate-spin' />
                 </div>
-              ) : creations.length === 0 ? (
+              ) : filteredCreations.length === 0 ? (
                 <div className='flex flex-col items-center justify-center py-8 text-muted-foreground'>
                   <ImageIcon size={48} className='mb-2 opacity-50' />
                   <p>暂无创作历史</p>
                 </div>
               ) : (
-                creations.map((creation) => (
+                filteredCreations.map((creation) => (
                   <div key={creation.id}>
                     <button
                       type='button'
                       className={cn(
                         'group hover:bg-accent hover:text-accent-foreground',
                         'flex w-full rounded-md px-2 py-2 text-start text-sm',
-                        selectedCreation?.id === creation.id && 'bg-muted'
+                        selectedCreation?.id === creation.id && 'bg-muted',
+                        creation.deleted === 1 && 'opacity-50'
                       )}
                       onClick={() => setSelectedCreation(creation)}
                     >
                       <div className='flex gap-2 w-full'>
-                        <div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'>
+                        <div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted relative'>
                           {creation.type === 'text2image' ? (
                             <ImageIcon size={16} />
                           ) : (
                             <Video size={16} />
+                          )}
+                          {creation.deleted === 1 && (
+                            <div className='absolute -top-1 -right-1'>
+                              <Trash2 size={12} className='text-destructive bg-background rounded-full p-0.5' />
+                            </div>
                           )}
                         </div>
                         <div className='flex-1 min-w-0'>
@@ -162,11 +179,13 @@ function CreationsPage() {
                             <span className='font-medium truncate'>
                               {creation.title}
                             </span>
-                            {getStatusIcon(creation.status)}
                           </div>
-                          <span className='text-xs text-muted-foreground'>
-                            {format(new Date(creation.createdAt), 'MM-dd HH:mm')} · {getStatusText(creation.status)}
-                          </span>
+                          <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                            {getStatusIcon(creation.status)}
+                            <span>{getStatusText(creation.status)}</span>
+                            <span>·</span>
+                            <span>{format(new Date(creation.createdAt), 'MM-dd HH:mm')}</span>
+                          </div>
                         </div>
                       </div>
                     </button>
@@ -177,12 +196,10 @@ function CreationsPage() {
             </ScrollArea>
           </div>
 
-          {/* Right Side - Creation Content */}
-          <div className='flex flex-1 flex-col border bg-background'>
+          <div className='flex flex-1 flex-col border bg-background overflow-hidden'>
             {selectedCreation ? (
               <>
-                {/* Header */}
-                <div className='flex items-center justify-between border-b p-3'>
+                <div className='flex items-center justify-between border-b p-3 flex-none'>
                   <div>
                     <h2 className='font-medium text-sm'>{selectedCreation.title}</h2>
                     <p className='text-xs text-muted-foreground'>
@@ -192,43 +209,42 @@ function CreationsPage() {
                   <div className='flex items-center gap-2'>
                     {getStatusIcon(selectedCreation.status)}
                     <span className='text-xs'>{getStatusText(selectedCreation.status)}</span>
-                    <Button
-                      size='icon'
-                      variant='ghost'
-                      className='h-7 w-7'
-                      onClick={() => handleDelete(selectedCreation)}
-                    >
-                      <Trash2 size={14} className='text-destructive' />
-                    </Button>
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className='flex-1 overflow-auto p-3'>
-                  <div className='mb-3'>
-                    <span className='text-xs text-muted-foreground'>提示词</span>
-                    <p className='mt-1 text-sm'>{selectedCreation.prompt}</p>
+                <ScrollArea className='flex-1 p-3'>
+                  <div className='space-y-4'>
+                    <div>
+                      <span className='text-xs text-muted-foreground'>提示词</span>
+                      <p className='mt-1 text-sm whitespace-pre-wrap break-words'>{selectedCreation.prompt}</p>
+                    </div>
+
+                    {(() => {
+                      const urls = parseResultUrls(selectedCreation.resultUrls)
+                      if (urls.length > 0) {
+                        return (
+                          <div className='grid grid-cols-2 gap-2'>
+                            {urls.map((url: string, index: number) => (
+                              <img
+                                key={index}
+                                src={url}
+                                alt={`Result ${index + 1}`}
+                                className='rounded-md border max-w-full h-auto'
+                              />
+                            ))}
+                          </div>
+                        )
+                      }
+                      return null
+                    })()}
+
+                    {selectedCreation.errorMessage && (
+                      <div className='rounded-md bg-destructive/10 p-3 text-xs text-destructive break-words'>
+                        {selectedCreation.errorMessage}
+                      </div>
+                    )}
                   </div>
-
-                  {selectedCreation.resultUrls && (
-                    <div className='grid grid-cols-2 gap-2'>
-                      {JSON.parse(selectedCreation.resultUrls).map((url: string, index: number) => (
-                        <img
-                          key={index}
-                          src={url}
-                          alt={`Result ${index + 1}`}
-                          className='rounded-md border'
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {selectedCreation.errorMessage && (
-                    <div className='rounded-md bg-destructive/10 p-3 text-xs text-destructive'>
-                      {selectedCreation.errorMessage}
-                    </div>
-                  )}
-                </div>
+                </ScrollArea>
               </>
             ) : (
               <div className='flex flex-1 items-center justify-center text-muted-foreground'>
@@ -241,32 +257,6 @@ function CreationsPage() {
           </div>
         </section>
       </Main>
-
-      {/* Delete Confirm Dialog */}
-      <ConfirmDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        title={
-          <div className='flex items-center gap-2 text-destructive'>
-            <AlertTriangle size={20} />
-            删除创作
-          </div>
-        }
-        desc={
-          <div className='space-y-3'>
-            <p>
-              确定要删除创作 <strong>{creationToDelete?.title}</strong> 吗？
-            </p>
-            <p className='text-sm text-muted-foreground'>
-              此操作将永久删除该创作记录，无法撤销。
-            </p>
-          </div>
-        }
-        cancelBtnText='取消'
-        confirmText='删除'
-        destructive
-        handleConfirm={confirmDelete}
-      />
     </>
   )
 }
