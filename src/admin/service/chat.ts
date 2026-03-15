@@ -1,4 +1,4 @@
-import { eq, like, or, and, desc, sql } from "drizzle-orm";
+import { eq, like, or, and, desc, asc, sql } from "drizzle-orm";
 import { getContext } from "./context";
 import { chats, messages, messageGenerations, messageAttachments } from "@/admin/db/schemas/chat";
 import { user } from "@/admin/db/schemas/auth";
@@ -80,7 +80,10 @@ export const chatService = {
 				.select()
 				.from(chats)
 				.where(conditions.length > 0 ? or(...conditions) : undefined)
-				.orderBy(desc(chats.createdAt))
+				.orderBy(
+					asc(chats.deleted),
+					desc(chats.createdAt)
+				)
 				.limit(pageSize)
 				.offset(offset);
 
@@ -111,6 +114,7 @@ export const chatService = {
 				model: row.model,
 				createdAt: row.createdAt.toISOString(),
 				updatedAt: row.updatedAt.toISOString(),
+				deleted: row.deleted,
 				user: userMap.get(row.userId),
 			}));
 

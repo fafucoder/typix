@@ -210,7 +210,8 @@ function ChatsPage() {
                         className={cn(
                           'group hover:bg-accent hover:text-accent-foreground',
                           'flex w-full rounded-md px-2 py-2 text-start text-sm',
-                          selectedChat?.id === chat.id && 'bg-muted'
+                          selectedChat?.id === chat.id && 'bg-muted',
+                          chat.deleted === 1 && 'opacity-50'
                         )}
                         onClick={() => handleSelectChat(chat)}
                       >
@@ -220,9 +221,17 @@ function ChatsPage() {
                           </div>
                           <div className='flex-1 min-w-0'>
                             <div className='flex items-center gap-2'>
-                              <span className='font-medium truncate'>
+                              <span className={cn(
+                                'font-medium truncate',
+                                chat.deleted === 1 && 'line-through'
+                              )}>
                                 {chat.title}
                               </span>
+                              {chat.deleted === 1 && (
+                                <span className='text-xs px-1.5 py-0.5 bg-red-100 text-red-800 rounded-full'>
+                                  已删除
+                                </span>
+                              )}
                             </div>
                             <div className='flex items-center gap-2 text-xs text-muted-foreground'>
                               {chat.user && (

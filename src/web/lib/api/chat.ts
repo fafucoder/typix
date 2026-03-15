@@ -9,6 +9,7 @@ export interface Chat {
   type: string
   createdAt: string
   updatedAt: string
+  deleted: number
   user?: {
     id: string
     name: string
