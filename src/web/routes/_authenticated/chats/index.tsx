@@ -31,6 +31,7 @@ function ChatsPage() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [userName, setUserName] = useState('')
   const pageSize = 20
   const observerRef = useRef<HTMLDivElement>(null)
@@ -43,10 +44,17 @@ function ChatsPage() {
   }, [])
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
     setPage(1)
     setChats([])
     loadChats(true)
-  }, [search, userName])
+  }, [debouncedSearch, userName])
 
   const loadChats = async (isNewSearch = false) => {
     try {
@@ -60,7 +68,7 @@ function ChatsPage() {
       const result = await chatService.getChats({
         page: currentPage,
         pageSize,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         userName: userName || undefined,
       })
 
@@ -131,7 +139,7 @@ function ChatsPage() {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !isLoading && !isLoadingMore && chats.length < total) {
+        if (entries[0]?.isIntersecting && !isLoading && !isLoadingMore && chats.length < total) {
           loadChats()
         }
       },
@@ -143,7 +151,7 @@ function ChatsPage() {
     }
 
     return () => observer.disconnect()
-  }, [isLoading, isLoadingMore, chats.length, total])
+  }, [isLoading, isLoadingMore, chats.length, total, loadChats])
 
   return (
     <>
@@ -161,7 +169,7 @@ function ChatsPage() {
             <div className='sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none'>
               <div className='flex items-center justify-between py-2'>
                 <div className='flex gap-2 items-center'>
-                  <h1 className='text-2xl font-bold'>聊天历史</h1>
+                  <h1 className='text-2xl font-bold'>创作历史</h1>
                   <MessageSquare size={20} />
                 </div>
               </div>
@@ -170,7 +178,7 @@ function ChatsPage() {
                   <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
                   <Input
                     placeholder='搜索聊天或用户名...'
-                    value={search || userName}
+                    value={search}
                     onChange={(e) => {
                       setSearch(e.target.value)
                       setUserName(e.target.value)

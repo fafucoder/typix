@@ -57,22 +57,12 @@ export const chatService = {
 			if (userName) {
 				const users = await db.select({ id: user.id }).from(user).where(like(user.name, `%${userName}%`));
 				userIds = users.map(u => u.id);
-				if (userIds.length === 0) {
-					return {
-						success: true,
-						data: {
-							chats: [],
-							total: 0,
-							page,
-							pageSize,
-						},
-					};
-				}
 			}
 
 			const conditions = [];
 			if (userIds.length > 0) {
-				conditions.push(or(...userIds.map(id => eq(chats.userId, id))));
+				const userIdConditions = userIds.map((id) => eq(chats.userId, id));
+				conditions.push(or(...userIdConditions));
 			}
 			if (search) {
 				conditions.push(like(chats.title, `%${search}%`));
@@ -81,7 +71,7 @@ export const chatService = {
 			const chatResults = await db
 				.select()
 				.from(chats)
-				.where(and(...conditions))
+				.where(conditions.length > 0 ? or(...conditions) : undefined)
 				.orderBy(desc(chats.createdAt))
 				.limit(pageSize)
 				.offset(offset);
@@ -89,7 +79,7 @@ export const chatService = {
 			const countResult = await db
 				.select({ count: chats.id })
 				.from(chats)
-				.where(and(...conditions));
+				.where(conditions.length > 0 ? or(...conditions) : undefined);
 			const total = countResult.length;
 
 			const relatedUserIds = [...new Set(chatResults.map(c => c.userId))];
