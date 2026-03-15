@@ -15,6 +15,7 @@ import {
   Home,
   AlertTriangle,
   GripVertical,
+  Pencil,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -43,8 +44,10 @@ function AIProvidersPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isCreateModelDialogOpen, setIsCreateModelDialogOpen] = useState(false)
+  const [isEditModelDialogOpen, setIsEditModelDialogOpen] = useState(false)
   const [isDeleteModelDialogOpen, setIsDeleteModelDialogOpen] = useState(false)
   const [modelToDelete, setModelToDelete] = useState<AiModel | null>(null)
+  const [modelToEdit, setModelToEdit] = useState<AiModel | null>(null)
   const [providers, setProviders] = useState<AiProvider[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -71,13 +74,22 @@ function AIProvidersPage() {
     type: 'text2image' as 'text2image' | 'text2video',
     description: '',
     settings: '',
+    ability: 't2i' as 't2i' | 'i2i' | 't2v',
+    supportedAspectRatios: '["1:1"]',
+    sort: 0,
+    maxInputImages: 0,
+    videoDurations: '',
   })
   
   const [showSecretKey, setShowSecretKey] = useState(false)
   
-  // Drag and drop states
+  // Drag and drop states for providers
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
   const [dragOverItem, setDragOverItem] = useState<string | null>(null)
+  
+  // Drag and drop states for models
+  const [draggedModelItem, setDraggedModelItem] = useState<string | null>(null)
+  const [dragOverModelItem, setDragOverModelItem] = useState<string | null>(null)
 
   // Load providers
   useState(() => {
@@ -186,6 +198,11 @@ function AIProvidersPage() {
         type: modelFormData.type,
         description: modelFormData.description || undefined,
         settings: modelFormData.settings || undefined,
+        ability: modelFormData.ability,
+        supportedAspectRatios: modelFormData.supportedAspectRatios,
+        sort: modelFormData.sort,
+        maxInputImages: modelFormData.maxInputImages || undefined,
+        videoDurations: modelFormData.videoDurations || undefined,
       })
       toast.success('模型创建成功')
       
@@ -195,7 +212,18 @@ function AIProvidersPage() {
       const updatedProvider = data.find(p => p.id === selectedProvider.id)
       setSelectedProvider(updatedProvider || null)
       setIsCreateModelDialogOpen(false)
-      setModelFormData({ modelId: '', name: '', type: 'text2image', description: '', settings: '' })
+      setModelFormData({ 
+        modelId: '', 
+        name: '', 
+        type: 'text2image', 
+        description: '', 
+        settings: '',
+        ability: 't2i',
+        supportedAspectRatios: '["1:1"]',
+        sort: 0,
+        maxInputImages: 0,
+        videoDurations: '',
+      })
     } catch (error) {
       toast.error('创建失败，请稍后重试')
     }
@@ -204,6 +232,69 @@ function AIProvidersPage() {
   const handleDeleteModel = (model: AiModel) => {
     setModelToDelete(model)
     setIsDeleteModelDialogOpen(true)
+  }
+
+  const handleEditModel = (model: AiModel) => {
+    setModelToEdit(model)
+    setModelFormData({
+      modelId: model.modelId,
+      name: model.name || '',
+      type: model.type as 'text2image' | 'text2video',
+      description: model.description || '',
+      settings: model.settings || '',
+      ability: model.ability as 't2i' | 'i2i' | 't2v',
+      supportedAspectRatios: model.supportedAspectRatios || '["1:1"]',
+      sort: model.sort || 0,
+      maxInputImages: model.maxInputImages || 0,
+      videoDurations: model.videoDurations || '',
+    })
+    setIsEditModelDialogOpen(true)
+  }
+
+  const handleUpdateModel = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!modelToEdit) return
+
+    try {
+      const updateData: {
+        modelId?: string
+        name?: string
+        type?: 'text2image' | 'text2video'
+        description?: string
+        settings?: string
+        ability?: 't2i' | 'i2i' | 't2v'
+        supportedAspectRatios?: string
+        maxInputImages?: number
+        videoDurations?: string
+      } = {}
+
+      if (modelFormData.modelId.trim()) updateData.modelId = modelFormData.modelId.trim()
+      if (modelFormData.name.trim()) updateData.name = modelFormData.name.trim()
+      updateData.type = modelFormData.type
+      if (modelFormData.description.trim()) updateData.description = modelFormData.description.trim()
+      if (modelFormData.settings.trim()) updateData.settings = modelFormData.settings.trim()
+      updateData.ability = modelFormData.ability
+      if (modelFormData.supportedAspectRatios.trim()) updateData.supportedAspectRatios = modelFormData.supportedAspectRatios.trim()
+      if (modelFormData.type === 'text2image') {
+        updateData.maxInputImages = modelFormData.maxInputImages
+      }
+      if (modelFormData.type === 'text2video') {
+        updateData.videoDurations = modelFormData.videoDurations.trim()
+      }
+
+      await aiService.updateModel(modelToEdit.id, updateData)
+      toast.success('模型更新成功')
+      setIsEditModelDialogOpen(false)
+      setModelToEdit(null)
+
+      // Refresh providers
+      const data = await aiService.getProviders()
+      setProviders(data)
+      const foundProvider = data.find(p => p.id === selectedProvider?.id)
+      setSelectedProvider(foundProvider || null)
+    } catch (error) {
+      toast.error('更新失败，请稍后重试')
+    }
   }
 
   const confirmDeleteModel = async () => {
@@ -376,6 +467,77 @@ function AIProvidersPage() {
       setProviders(data)
     } finally {
       setDraggedItem(null)
+    }
+  }
+
+  // Model drag and drop handlers
+  const handleModelDragStart = (e: React.DragEvent, modelId: string) => {
+    setDraggedModelItem(modelId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleModelDragOver = (e: React.DragEvent, modelId: string) => {
+    e.preventDefault()
+    if (draggedModelItem !== modelId) {
+      setDragOverModelItem(modelId)
+    }
+  }
+
+  const handleModelDragLeave = () => {
+    setDragOverModelItem(null)
+  }
+
+  const handleModelDrop = async (e: React.DragEvent, targetModelId: string) => {
+    e.preventDefault()
+    setDragOverModelItem(null)
+    
+    if (!draggedModelItem || draggedModelItem === targetModelId || !selectedProvider) {
+      setDraggedModelItem(null)
+      return
+    }
+
+    try {
+      const models = selectedProvider.models || []
+      const newModels = [...models]
+      const draggedIndex = newModels.findIndex(m => m.id === draggedModelItem)
+      const targetIndex = newModels.findIndex(m => m.id === targetModelId)
+      
+      if (draggedIndex === -1 || targetIndex === -1) return
+      
+      const removed = newModels[draggedIndex]
+      if (!removed) return
+      
+      newModels.splice(draggedIndex, 1)
+      newModels.splice(targetIndex, 0, removed)
+      
+      // Update sort values for all models (larger sort value = higher position)
+      const totalCount = newModels.length
+      const updatedModels = newModels.map((model, index) => ({
+        ...model,
+        sort: totalCount - index - 1
+      }))
+      
+      // Update local state
+      const updatedProvider = { ...selectedProvider, models: updatedModels }
+      setSelectedProvider(updatedProvider)
+      setProviders(providers.map(p => p.id === updatedProvider.id ? updatedProvider : p))
+      
+      // Update all models' sort on server
+      await Promise.all(
+        updatedModels.map(model => 
+          aiService.updateModel(model.id, { sort: model.sort })
+        )
+      )
+      toast.success('模型排序已更新')
+    } catch (error) {
+      toast.error('模型排序更新失败')
+      // Refresh providers to reset state
+      const data = await aiService.getProviders()
+      setProviders(data)
+      const foundProvider = data.find(p => p.id === selectedProvider?.id)
+      setSelectedProvider(foundProvider || null)
+    } finally {
+      setDraggedModelItem(null)
     }
   }
 
@@ -620,17 +782,6 @@ function AIProvidersPage() {
                         </Button>
                       </div>
                     </div>
-                    
-                    <div className='space-y-2'>
-                      <Label htmlFor='settings'>Settings 配置</Label>
-                      <Textarea
-                        id='settings'
-                        value={selectedProvider.settings || ''}
-                        readOnly
-                        className='bg-muted resize-none overflow-hidden whitespace-pre-wrap break-all'
-                        rows={4}
-                      />
-                    </div>
                   </div>
                 </div>
 
@@ -658,9 +809,22 @@ function AIProvidersPage() {
                       </div>
                     ) : (
                       <div className='space-y-2 p-4'>
-                        {selectedProvider.models?.map((model) => (
-                          <div key={model.id} className='flex items-center justify-between rounded-md border p-3'>
+                        {selectedProvider.models?.sort((a, b) => (b.sort || 0) - (a.sort || 0)).map((model) => (
+                          <div
+                            key={model.id}
+                            draggable
+                            onDragStart={(e) => handleModelDragStart(e, model.id)}
+                            onDragOver={(e) => handleModelDragOver(e, model.id)}
+                            onDragLeave={handleModelDragLeave}
+                            onDrop={(e) => handleModelDrop(e, model.id)}
+                            className={cn(
+                              'flex items-center justify-between rounded-md border p-3 cursor-move',
+                              dragOverModelItem === model.id && 'border-t-2 border-primary',
+                              draggedModelItem === model.id && 'opacity-50'
+                            )}
+                          >
                             <div className='flex items-center gap-3'>
+                              <GripVertical size={16} className='text-muted-foreground cursor-grab active:cursor-grabbing' />
                               <div className='flex h-8 w-8 items-center justify-center rounded-full bg-muted'>
                                 {model.type === 'text2image' ? (
                                   <ImageIcon size={16} />
@@ -768,6 +932,14 @@ function AIProvidersPage() {
                               </div>
                             </div>
                             <div className='flex items-center gap-2'>
+                              <Button
+                                size='icon'
+                                variant='ghost'
+                                className='h-8 w-8 rounded-md'
+                                onClick={() => handleEditModel(model)}
+                              >
+                                <Pencil size={16} className='stroke-muted-foreground' />
+                              </Button>
                               <Switch
                                 checked={Boolean(model.enabled)}
                                 onCheckedChange={() => handleToggleModel(model.id)}
@@ -928,7 +1100,7 @@ function AIProvidersPage() {
 
           {/* Create Model Dialog */}
           <Dialog open={isCreateModelDialogOpen} onOpenChange={setIsCreateModelDialogOpen}>
-            <DialogContent className='sm:max-w-2xl'>
+            <DialogContent className='sm:max-w-3xl max-h-[90vh] overflow-y-auto'>
               <DialogHeader>
                 <DialogTitle>添加模型</DialogTitle>
               </DialogHeader>
@@ -961,7 +1133,7 @@ function AIProvidersPage() {
                         name='modelType'
                         value='text2image'
                         checked={modelFormData.type === 'text2image'}
-                        onChange={() => setModelFormData({ ...modelFormData, type: 'text2image' })}
+                        onChange={() => setModelFormData({ ...modelFormData, type: 'text2image', ability: 't2i' })}
                         className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
                       />
                       文生图
@@ -972,13 +1144,74 @@ function AIProvidersPage() {
                         name='modelType'
                         value='text2video'
                         checked={modelFormData.type === 'text2video'}
-                        onChange={() => setModelFormData({ ...modelFormData, type: 'text2video' })}
+                        onChange={() => setModelFormData({ ...modelFormData, type: 'text2video', ability: 't2v' })}
                         className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
                       />
                       文生视频
                     </label>
                   </div>
                 </div>
+                {modelFormData.type === 'text2image' && (
+                  <div className='space-y-2'>
+                    <Label>模型能力</Label>
+                    <div className='flex gap-4'>
+                      <label className='flex items-center gap-2'>
+                        <input
+                          type='radio'
+                          name='ability'
+                          value='t2i'
+                          checked={modelFormData.ability === 't2i'}
+                          onChange={() => setModelFormData({ ...modelFormData, ability: 't2i' })}
+                          className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
+                        />
+                        文生图 (T2I)
+                      </label>
+                      <label className='flex items-center gap-2'>
+                        <input
+                          type='radio'
+                          name='ability'
+                          value='i2i'
+                          checked={modelFormData.ability === 'i2i'}
+                          onChange={() => setModelFormData({ ...modelFormData, ability: 'i2i' })}
+                          className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
+                        />
+                        图生图 (I2I)
+                      </label>
+                    </div>
+                  </div>
+                )}
+                <div className='space-y-2'>
+                  <Label htmlFor='supportedAspectRatios'>支持的宽高比 (JSON 数组)</Label>
+                  <Input
+                    id='supportedAspectRatios'
+                    value={modelFormData.supportedAspectRatios}
+                    onChange={(e) => setModelFormData({ ...modelFormData, supportedAspectRatios: e.target.value })}
+                    placeholder='["1:1", "16:9", "9:16"]'
+                  />
+                </div>
+                {modelFormData.type === 'text2image' && (
+                  <div className='space-y-2'>
+                    <Label htmlFor='maxInputImages'>最大图片输出数</Label>
+                    <Input
+                      id='maxInputImages'
+                      type='number'
+                      value={modelFormData.maxInputImages}
+                      onChange={(e) => setModelFormData({ ...modelFormData, maxInputImages: parseInt(e.target.value) || 0 })}
+                      placeholder='0 表示不限制'
+                    />
+                  </div>
+                )}
+                {modelFormData.type === 'text2video' && (
+                  <div className='space-y-2'>
+                    <Label htmlFor='videoDurations'>视频时长 (T2V 模型，JSON 数组)</Label>
+                    <Input
+                      id='videoDurations'
+                      value={modelFormData.videoDurations}
+                      onChange={(e) => setModelFormData({ ...modelFormData, videoDurations: e.target.value })}
+                      placeholder='["3s", "5s", "10s"]'
+                    />
+                  </div>
+                )}
                 <div className='space-y-2'>
                   <Label htmlFor='description'>模型说明</Label>
                   <textarea
@@ -997,7 +1230,7 @@ function AIProvidersPage() {
                     value={modelFormData.settings}
                     onChange={(e) => setModelFormData({ ...modelFormData, settings: e.target.value })}
                     placeholder='{"maxInputImages": 0, "supportedAspectRatios": ["1:1", "16:9"]}'
-                    className='w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+                    className='w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
                   />
                 </div>
                 <div className='flex justify-end gap-2'>
@@ -1005,6 +1238,151 @@ function AIProvidersPage() {
                     取消
                   </Button>
                   <Button type='submit'>创建</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Model Dialog */}
+          <Dialog open={isEditModelDialogOpen} onOpenChange={setIsEditModelDialogOpen}>
+            <DialogContent className='sm:max-w-3xl max-h-[90vh] overflow-y-auto'>
+              <DialogHeader>
+                <DialogTitle>编辑模型</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleUpdateModel} className='space-y-4 py-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='edit-name'>模型名称</Label>
+                  <Input
+                    id='edit-name'
+                    value={modelFormData.name}
+                    onChange={(e) => setModelFormData({ ...modelFormData, name: e.target.value })}
+                    placeholder='请输入模型名称'
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='edit-modelId'>模型 ID</Label>
+                  <Input
+                    id='edit-modelId'
+                    value={modelFormData.modelId}
+                    placeholder='请输入模型ID'
+                    onChange={(e) => setModelFormData({ ...modelFormData, modelId: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label>模型类型</Label>
+                  <div className='flex gap-4'>
+                    <label className='flex items-center gap-2'>
+                      <input
+                        type='radio'
+                        name='editModelType'
+                        value='text2image'
+                        checked={modelFormData.type === 'text2image'}
+                        onChange={() => setModelFormData({ ...modelFormData, type: 'text2image', ability: 't2i' })}
+                        className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
+                      />
+                      文生图
+                    </label>
+                    <label className='flex items-center gap-2'>
+                      <input
+                        type='radio'
+                        name='editModelType'
+                        value='text2video'
+                        checked={modelFormData.type === 'text2video'}
+                        onChange={() => setModelFormData({ ...modelFormData, type: 'text2video', ability: 't2v' })}
+                        className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
+                      />
+                      文生视频
+                    </label>
+                  </div>
+                </div>
+                {modelFormData.type === 'text2image' && (
+                  <div className='space-y-2'>
+                    <Label>模型能力</Label>
+                    <div className='flex gap-4'>
+                      <label className='flex items-center gap-2'>
+                        <input
+                          type='radio'
+                          name='editAbility'
+                          value='t2i'
+                          checked={modelFormData.ability === 't2i'}
+                          onChange={() => setModelFormData({ ...modelFormData, ability: 't2i' })}
+                          className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
+                        />
+                        文生图 (T2I)
+                      </label>
+                      <label className='flex items-center gap-2'>
+                        <input
+                          type='radio'
+                          name='editAbility'
+                          value='i2i'
+                          checked={modelFormData.ability === 'i2i'}
+                          onChange={() => setModelFormData({ ...modelFormData, ability: 'i2i' })}
+                          className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
+                        />
+                        图生图 (I2I)
+                      </label>
+                    </div>
+                  </div>
+                )}
+                <div className='space-y-2'>
+                  <Label htmlFor='edit-supportedAspectRatios'>支持的宽高比 (JSON 数组)</Label>
+                  <Input
+                    id='edit-supportedAspectRatios'
+                    value={modelFormData.supportedAspectRatios}
+                    onChange={(e) => setModelFormData({ ...modelFormData, supportedAspectRatios: e.target.value })}
+                    placeholder='["1:1", "16:9", "9:16"]'
+                  />
+                </div>
+                {modelFormData.type === 'text2image' && (
+                  <div className='space-y-2'>
+                    <Label htmlFor='edit-maxInputImages'>最大图片输出数</Label>
+                    <Input
+                      id='edit-maxInputImages'
+                      type='number'
+                      value={modelFormData.maxInputImages}
+                      onChange={(e) => setModelFormData({ ...modelFormData, maxInputImages: parseInt(e.target.value) || 0 })}
+                      placeholder='0 表示不限制'
+                    />
+                  </div>
+                )}
+                {modelFormData.type === 'text2video' && (
+                  <div className='space-y-2'>
+                    <Label htmlFor='edit-videoDurations'>视频时长 (T2V 模型，JSON 数组)</Label>
+                    <Input
+                      id='edit-videoDurations'
+                      value={modelFormData.videoDurations}
+                      onChange={(e) => setModelFormData({ ...modelFormData, videoDurations: e.target.value })}
+                      placeholder='["3s", "5s", "10s"]'
+                    />
+                  </div>
+                )}
+                <div className='space-y-2'>
+                  <Label htmlFor='edit-description'>模型说明</Label>
+                  <textarea
+                    id='edit-description'
+                    value={modelFormData.description}
+                    onChange={(e) => setModelFormData({ ...modelFormData, description: e.target.value })}
+                    placeholder='请输入模型说明'
+                    rows={2}
+                    className='w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='edit-settings'>模型配置 (JSON)</Label>
+                  <textarea
+                    id='edit-settings'
+                    value={modelFormData.settings}
+                    onChange={(e) => setModelFormData({ ...modelFormData, settings: e.target.value })}
+                    placeholder='{"maxInputImages": 0, "supportedAspectRatios": ["1:1", "16:9"]}'
+                    className='w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+                  />
+                </div>
+                <div className='flex justify-end gap-2'>
+                  <Button type='button' variant='ghost' onClick={() => setIsEditModelDialogOpen(false)}>
+                    取消
+                  </Button>
+                  <Button type='submit'>保存</Button>
                 </div>
               </form>
             </DialogContent>

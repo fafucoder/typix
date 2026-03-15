@@ -33,6 +33,11 @@ const CreateModelSchema = z.object({
 	description: z.string().optional(),
 	settings: z.string().optional(),
 	enabled: z.boolean().default(true),
+	ability: z.enum(["t2i", "i2i", "t2v"]).optional(),
+	supportedAspectRatios: z.string().optional(),
+	sort: z.number().optional(),
+	maxInputImages: z.number().optional(),
+	videoDurations: z.string().optional(),
 });
 
 const UpdateModelSchema = z.object({
@@ -42,6 +47,11 @@ const UpdateModelSchema = z.object({
 	description: z.string().optional(),
 	settings: z.string().optional(),
 	enabled: z.boolean().optional(),
+	ability: z.enum(["t2i", "i2i", "t2v"]).optional(),
+	supportedAspectRatios: z.string().optional(),
+	sort: z.number().optional(),
+	maxInputImages: z.number().optional(),
+	videoDurations: z.string().optional(),
 });
 
 const app = new Hono<Env>()

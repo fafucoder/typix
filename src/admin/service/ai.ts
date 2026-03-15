@@ -55,6 +55,11 @@ interface CreateModelRequest {
 	description?: string;
 	settings?: string;
 	enabled?: boolean;
+	ability?: "t2i" | "i2i" | "t2v";
+	supportedAspectRatios?: string;
+	sort?: number;
+	maxInputImages?: number;
+	videoDurations?: string;
 }
 
 interface UpdateModelRequest {
@@ -64,6 +69,11 @@ interface UpdateModelRequest {
 	description?: string;
 	settings?: string;
 	enabled?: boolean;
+	ability?: "t2i" | "i2i" | "t2v";
+	supportedAspectRatios?: string;
+	sort?: number;
+	maxInputImages?: number;
+	videoDurations?: string;
 }
 
 interface ModelResult {
@@ -75,6 +85,11 @@ interface ModelResult {
 	description: string | null;
 	settings: string | null;
 	enabled: number;
+	ability: string;
+	supportedAspectRatios: string | null;
+	sort: number;
+	maxInputImages: number | null;
+	videoDurations: string | null;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -258,7 +273,7 @@ const getModels = async (providerId?: string): Promise<{ success: boolean; model
 		if (providerId) {
 			query = query.where(eq(aiModels.providerId, providerId));
 		}
-		const models = await query.orderBy(desc(aiModels.createdAt));
+		const models = await query.orderBy(desc(aiModels.sort), desc(aiModels.createdAt));
 		
 		return { success: true, models: models as ModelResult[] };
 	} catch (error: any) {
@@ -315,11 +330,16 @@ const createModel = async (req: CreateModelRequest): Promise<{ success: boolean;
 			id,
 			providerId: req.providerId,
 			modelId: req.modelId,
-			name: req.name || null,
+			name: req.name || "",
 			type: req.type,
 			description: req.description || null,
 			settings: req.settings || null,
 			enabled: req.enabled ? 1 : 0,
+			ability: req.ability || "t2i",
+			supportedAspectRatios: req.supportedAspectRatios || "1:1",
+			sort: req.sort || 0,
+			maxInputImages: req.maxInputImages || null,
+			videoDurations: req.videoDurations || null,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		});
@@ -344,6 +364,11 @@ const updateModel = async (id: string, req: UpdateModelRequest): Promise<{ succe
 		if (req.description !== undefined) updateData.description = req.description || null;
 		if (req.settings !== undefined) updateData.settings = req.settings || null;
 		if (req.enabled !== undefined) updateData.enabled = req.enabled ? 1 : 0;
+		if (req.ability !== undefined) updateData.ability = req.ability;
+		if (req.supportedAspectRatios !== undefined) updateData.supportedAspectRatios = req.supportedAspectRatios;
+		if (req.sort !== undefined) updateData.sort = req.sort;
+		if (req.maxInputImages !== undefined) updateData.maxInputImages = req.maxInputImages;
+		if (req.videoDurations !== undefined) updateData.videoDurations = req.videoDurations;
 		
 		await db.update(aiModels).set(updateData).where(eq(aiModels.id, id));
 		

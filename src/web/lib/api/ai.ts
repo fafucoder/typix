@@ -24,6 +24,11 @@ export interface AiModel {
 	description: string | null
 	settings: string | null
 	enabled: number | boolean
+	ability: 't2i' | 'i2i' | 't2v'
+	supportedAspectRatios: string | null
+	sort: number
+	maxInputImages: number | null
+	videoDurations: string | null
 	createdAt: string
 	updatedAt: string
 }
@@ -55,6 +60,11 @@ export interface CreateModelRequest {
 	description?: string
 	settings?: string
 	enabled?: boolean
+	ability?: 't2i' | 'i2i' | 't2v'
+	supportedAspectRatios?: string
+	sort?: number
+	maxInputImages?: number
+	videoDurations?: string
 }
 
 export interface UpdateModelRequest {
@@ -64,6 +74,11 @@ export interface UpdateModelRequest {
 	description?: string
 	settings?: string
 	enabled?: boolean
+	ability?: 't2i' | 'i2i' | 't2v'
+	supportedAspectRatios?: string
+	sort?: number
+	maxInputImages?: number
+	videoDurations?: string
 }
 
 export interface ApiResponse<T> {
