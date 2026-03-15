@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: typix-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: Typix@123456
+      MYSQL_DATABASE: typix
+      MYSQL_USER: root
+      MYSQL_PASSWORD: Typix@123456
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - typix-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  app:
+    build:
+      context: ../..
+      dockerfile: build/docker/Dockerfile.app
+    container_name: typix-app
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://root:Typix@123456@mysql:3306/typix
+      NODE_ENV: production
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_PASSWORD: Typix@123456
+      MYSQL_DATABASE: typix
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../..:/app
+      - shared-files:/app/.files
+    networks:
+      - typix-network
+
+  web:
+    build:
+      context: ../..
+      dockerfile: build/docker/Dockerfile.web
+    container_name: typix-web
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    environment:
+      NODE_ENV: production
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_PASSWORD: Typix@123456
+      MYSQL_DATABASE: typix
+    volumes:
+      - ../..:/app
+      - shared-files:/app/.files
+    networks:
+      - typix-network
+
+volumes:
+  mysql-data:
+  shared-files:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ../../.files  # 使用相对路径，相对于 docker-compose.yml 文件
+
+networks:
+  typix-network:
+    driver: bridge

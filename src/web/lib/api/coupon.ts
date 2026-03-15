@@ -106,7 +106,7 @@ export const couponService = {
     const response = await apiClient.api.coupons[':id'].$put({
       param: { id },
       json: data,
-    })
+    } as any)
     const result: ApiResponse<Coupon> = await response.json()
     if (!result.data) throw new Error(result.message || 'Failed to update coupon')
     return result.data

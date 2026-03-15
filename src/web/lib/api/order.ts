@@ -54,7 +54,7 @@ export const orderService = {
       query: params,
     })
     const result = await response.json()
-    if (result.code !== 'ok') {
+    if (result.code !== 'ok' || !('data' in result) || !result.data) {
       throw new Error(result.message || '获取订单列表失败')
     }
     return result.data
@@ -65,18 +65,18 @@ export const orderService = {
       param: { id },
     })
     const result = await response.json()
-    if (result.code !== 'ok') {
+    if (result.code !== 'ok' || !('data' in result) || !result.data) {
       throw new Error(result.message || '获取订单详情失败')
     }
     return result.data
   },
 
-  cancelOrder: async (id: string): Promise<{ message: string }> => {
+  cancelOrder: async (id: string): Promise<{ success: boolean }> => {
     const response = await apiClient.api.orders[':id'].cancel.$post({
       param: { id },
     })
     const result = await response.json()
-    if (result.code !== 'ok') {
+    if (result.code !== 'ok' || !('data' in result) || !result.data) {
       throw new Error(result.message || '取消订单失败')
     }
     return result.data

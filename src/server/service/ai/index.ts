@@ -138,6 +138,16 @@ export const GetEnabledAiProvidersWithModelsSchema = z.object({
 });
 export type GetEnabledAiProvidersWithModels = z.infer<typeof GetEnabledAiProvidersWithModelsSchema>;
 
+export const GetAiProviderByIdSchema = z.object({
+	id: z.string(),
+});
+export type GetAiProviderById = z.infer<typeof GetAiProviderByIdSchema>;
+
+export const GetAiModelsByProviderIdSchema = z.object({
+	providerId: z.string(),
+});
+export type GetAiModelsByProviderId = z.infer<typeof GetAiModelsByProviderIdSchema>;
+
 const getEnabledAiProvidersWithModels = async (req: GetEnabledAiProvidersWithModels, _ctx: Partial<RequestContext> = {}) => {
 	const { db } = getContext();
 	const modelType = req.modelType;
@@ -281,6 +291,49 @@ const getAiProviderAndModelById = async (req: GetAiProviderAndModelById, _ctx: R
 	return { dbProvider, dbModel };
 };
 
+const getAiProviderById = async (req: GetAiProviderById, ctx: RequestContext) => {
+	const { db } = getContext();
+	
+	// Get provider from database
+	const dbProvider = await db.query.aiProviders.findFirst({
+		where: eq(aiProviders.id, req.id),
+	});
+	
+	if (!dbProvider) {
+		throw new ServiceException('not_found', 'AI provider not found');
+	}
+	
+	// Get models for this provider
+	const dbModels = await db.query.aiModels.findMany({
+		where: eq(aiModels.providerId, dbProvider.id),
+		orderBy: (aiModels, { desc }) => [desc(aiModels.sort)],
+	});
+	
+	const serviceModels = dbModels.map(dbModel => dbModelToServiceModel(dbModel));
+	return dbProviderToServiceProvider(dbProvider, serviceModels);
+};
+
+const getAiModelsByProviderId = async (req: GetAiModelsByProviderId, ctx: RequestContext) => {
+	const { db } = getContext();
+	
+	// Get provider from database
+	const dbProvider = await db.query.aiProviders.findFirst({
+		where: eq(aiProviders.id, req.providerId),
+	});
+	
+	if (!dbProvider) {
+		throw new ServiceException('not_found', 'AI provider not found');
+	}
+	
+	// Get models for this provider
+	const dbModels = await db.query.aiModels.findMany({
+		where: eq(aiModels.providerId, dbProvider.id),
+		orderBy: (aiModels, { desc }) => [desc(aiModels.sort)],
+	});
+	
+	return dbModels.map(dbModel => dbModelToServiceModel(dbModel));
+};
+
 class AiService {
 	getAiProviders = getAiProviders;
 	getEnabledAiProvidersWithModels = getEnabledAiProvidersWithModels;
@@ -292,6 +345,8 @@ class AiService {
 	deleteAiModel = deleteAiModel;
 	batchUpdateAiModelsEnabled = batchUpdateAiModelsEnabled;
 	getAiProviderAndModelById = getAiProviderAndModelById;
+	getAiProviderById = getAiProviderById;
+	getAiModelsByProviderId = getAiModelsByProviderId;
 }
 
 export const aiService = new AiService();

@@ -71,6 +71,7 @@ function SubscribesPage() {
   const [modelForm, setModelForm] = useState({
     maxUsage: 0,
     enabled: '1' as '1' | '0',
+    sortOrder: 0,
   })
   const [transferSelectedModels, setTransferSelectedModels] = useState<string[]>([])
   const [editingModel, setEditingModel] = useState<SubscribeModel | null>(null)
@@ -299,6 +300,7 @@ function SubscribesPage() {
       setModelForm({
         maxUsage: 0,
         enabled: '1' as '1' | '0',
+        sortOrder: 0,
       })
     } catch (error) {
       toast.error('批量添加模型失败')

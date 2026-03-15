@@ -40,14 +40,14 @@ export function DateTimePicker({
     if (date) {
       const [hours, minutes] = timeValue.split(':').map(Number)
       const newDate = new Date(date)
-      newDate.setHours(hours)
-      newDate.setMinutes(minutes)
+      newDate.setHours(hours || 0)
+      newDate.setMinutes(minutes || 0)
       onChange(newDate.toISOString().slice(0, 16))
     } else {
       const today = new Date()
       const [hours, minutes] = timeValue.split(':').map(Number)
-      today.setHours(hours)
-      today.setMinutes(minutes)
+      today.setHours(hours || 0)
+      today.setMinutes(minutes || 0)
       onChange(today.toISOString().slice(0, 16))
     }
   }

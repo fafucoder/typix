@@ -59,10 +59,10 @@ export const chatService = {
       query: params,
     })
     const result = await response.json()
-    if (result.code !== 'ok') {
+    if (result.code !== 'ok' || !('data' in result) || !result.data) {
       throw new Error(result.message || '获取聊天列表失败')
     }
-    return result.data
+    return result.data as any
   },
 
   getChatById: async (id: string): Promise<ChatDetailResult> => {
@@ -70,10 +70,10 @@ export const chatService = {
       param: { id },
     })
     const result = await response.json()
-    if (result.code !== 'ok') {
+    if (result.code !== 'ok' || !('data' in result) || !result.data) {
       throw new Error(result.message || '获取聊天详情失败')
     }
-    return result.data
+    return result.data as any
   },
 
   deleteChat: async (id: string): Promise<{ success: boolean }> => {
@@ -81,7 +81,7 @@ export const chatService = {
       param: { id },
     })
     const result = await response.json()
-    if (result.code !== 'ok') {
+    if (result.code !== 'ok' || !('data' in result) || !result.data) {
       throw new Error(result.message || '删除聊天失败')
     }
     return result.data

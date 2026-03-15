@@ -24,7 +24,7 @@ export interface AiModel {
 	description: string | null
 	settings: string | null
 	enabled: number | boolean
-	ability: 't2i' | 'i2i' | 't2v'
+	ability: string
 	supportedAspectRatios: string | null
 	sort: number
 	maxInputImages: number | null
@@ -99,8 +99,9 @@ export const aiService = {
 		const response = await apiClient.api.admin.ai.providers[':id'].$get({
 			param: { id },
 		})
-		const result: ApiResponse<AiProvider> = await response.json()
-		return result.data as AiProvider
+		const result = await response.json()
+		if (!('data' in result) || !result.data) throw new Error(result.message || '获取提供商失败')
+		return result.data as any
 	},
 
 	createProvider: async (data: CreateProviderRequest): Promise<{ id: string }> => {
@@ -158,8 +159,9 @@ export const aiService = {
 		const response = await apiClient.api.admin.ai.models[':id'].$get({
 			param: { id },
 		})
-		const result: ApiResponse<AiModel> = await response.json()
-		return result.data as AiModel
+		const result = await response.json()
+		if (!('data' in result) || !result.data) throw new Error(result.message || '获取模型失败')
+		return result.data as any
 	},
 
 	createModel: async (data: CreateModelRequest): Promise<{ id: string }> => {

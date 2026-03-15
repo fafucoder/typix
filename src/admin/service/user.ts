@@ -133,7 +133,7 @@ export const userService = {
 				return { success: false, error: "User not found" };
 			}
 
-			await db.delete(user).where(eq(user.id, id));
+			await (db as any).delete(user).where(eq(user.id, id));
 
 			return { success: true };
 		} catch (error) {
@@ -148,7 +148,7 @@ export const userService = {
 
 		try {
 			for (const id of ids) {
-				await db.delete(user).where(eq(user.id, id));
+				await (db as any).delete(user).where(eq(user.id, id));
 			}
 
 			return { success: true };

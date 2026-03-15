@@ -30,13 +30,13 @@ export interface ApiResponse<T> {
 
 export const creationService = {
 	getCreations: async (): Promise<Creation[]> => {
-		const response = await apiClient.api.creations.$get()
+		const response = await (apiClient.api as any).creations.$get()
 		const result: ApiResponse<Creation[]> = await response.json()
 		return result.data || []
 	},
 
 	getCreationById: async (id: string): Promise<Creation> => {
-		const response = await apiClient.api.creations[':id'].$get({
+		const response = await (apiClient.api as any).creations[':id'].$get({
 			param: { id },
 		})
 		const result: ApiResponse<Creation> = await response.json()

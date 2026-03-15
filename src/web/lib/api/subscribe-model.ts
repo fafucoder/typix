@@ -65,12 +65,12 @@ export const subscribeModelService = {
 	// Create subscribe model
 	createSubscribeModel: async (data: CreateSubscribeModelData): Promise<{ model: SubscribeModel }> => {
 		// Filter out undefined or null values
-		const filteredData = Object.entries(data).reduce((acc, [key, value]) => {
+		const filteredData: Partial<CreateSubscribeModelData> = {}
+		for (const [key, value] of Object.entries(data)) {
 			if (value !== undefined && value !== null) {
-				acc[key as keyof CreateSubscribeModelData] = value
+				filteredData[key as keyof CreateSubscribeModelData] = value
 			}
-			return acc
-		}, {} as CreateSubscribeModelData)
+		}
 		
 		const response = await apiClient.api['subscribe-models'].$post({
 			json: filteredData,
@@ -83,17 +83,17 @@ export const subscribeModelService = {
 	// Update subscribe model
 	updateSubscribeModel: async (id: string, data: UpdateSubscribeModelData): Promise<{ model: SubscribeModel }> => {
 		// Filter out undefined or null values
-		const filteredData = Object.entries(data).reduce((acc, [key, value]) => {
+		const filteredData: Partial<UpdateSubscribeModelData> = {}
+		for (const [key, value] of Object.entries(data)) {
 			if (value !== undefined && value !== null) {
-				acc[key as keyof UpdateSubscribeModelData] = value
+				filteredData[key as keyof UpdateSubscribeModelData] = value
 			}
-			return acc
-		}, {} as UpdateSubscribeModelData)
+		}
 		
 		const response = await apiClient.api['subscribe-models'][':id'].$put({
 			param: { id },
 			json: filteredData,
-		})
+		} as any)
 		const result: ApiResponse<SubscribeModel> = await response.json()
 		if (!result.data) throw new Error(result.message || 'Failed to update subscribe model')
 		return { model: result.data }

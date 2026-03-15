@@ -95,7 +95,7 @@ export const subscribeService = {
     const response = await apiClient.api.subscribes[':id'].$put({
       param: { id },
       json: data,
-    })
+    } as any)
     const result: ApiResponse<Subscribe> = await response.json()
     if (!result.data) throw new Error(result.message || 'Failed to update subscribe')
     return result.data
@@ -106,7 +106,7 @@ export const subscribeService = {
     const response = await apiClient.api.subscribes[':id'].$delete({
       param: { id },
     })
-    const result: ApiResponse<void> = await response.json()
+    const result: any = await response.json()
     if (result.code !== 'ok') throw new Error(result.message || 'Failed to delete subscribe')
   },
 }
