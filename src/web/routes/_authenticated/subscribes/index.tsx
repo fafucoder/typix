@@ -34,10 +34,12 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { subscribeService, type Subscribe } from '@/lib/api/subscribe'
-import { Plus, Pencil, Trash2, Loader2, Settings, Plus as PlusIcon, Trash2 as TrashIcon, Image as ImageIcon, Video, Check, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Settings, Plus as PlusIcon, Trash2 as TrashIcon, Image, Video, Check, X, GripVertical } from 'lucide-react'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { AlertTriangle } from 'lucide-react'
 import { subscribeModelService, type SubscribeModel } from '@/lib/api/subscribe-model'
+import { Transfer } from '@/components/ui/transfer'
+import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/_authenticated/subscribes/')({
   component: SubscribesPage,
@@ -64,12 +66,19 @@ function SubscribesPage() {
   const [availableModels, setAvailableModels] = useState<any[]>([])
   const [isModelLoading, setIsModelLoading] = useState(false)
   const [isAddingModel, setIsAddingModel] = useState(false)
+  const [isUpdatingModel, setIsUpdatingModel] = useState(false)
   const [selectedModelId, setSelectedModelId] = useState('')
   const [modelForm, setModelForm] = useState({
     maxUsage: 0,
     enabled: '1' as '1' | '0',
-    sortOrder: 0,
   })
+  const [transferSelectedModels, setTransferSelectedModels] = useState<string[]>([])
+  const [editingModel, setEditingModel] = useState<SubscribeModel | null>(null)
+  const [editingMaxUsage, setEditingMaxUsage] = useState<number>(0)
+  
+  // Drag and drop states for models
+  const [draggedModelItem, setDraggedModelItem] = useState<string | null>(null)
+  const [dragOverModelItem, setDragOverModelItem] = useState<string | null>(null)
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -206,6 +215,9 @@ function SubscribesPage() {
     setIsModelConfigOpen(true)
     await loadModels(subscribe.id)
     await loadAvailableModels(subscribe.id)
+    // 初始化已选模型
+    const currentModelIds = models.map(m => m.modelId)
+    setTransferSelectedModels(currentModelIds)
   }
 
   const loadModels = async (subscribeId: string) => {
@@ -258,6 +270,108 @@ function SubscribesPage() {
     }
   }
 
+  const handleBatchAddModels = async () => {
+    if (!currentSubscribe || transferSelectedModels.length === 0) return
+
+    try {
+      setIsAddingModel(true)
+      
+      // 批量添加模型
+      const promises = transferSelectedModels.map(modelId => 
+        subscribeModelService.createSubscribeModel({
+          subscribeId: currentSubscribe.id,
+          modelId,
+          maxUsage: modelForm.maxUsage,
+          enabled: Number(modelForm.enabled),
+          sortOrder: 0, // 默认排序值，后续可通过拖拽调整
+        })
+      )
+      
+      await Promise.all(promises)
+      toast.success(`成功添加 ${transferSelectedModels.length} 个模型`)
+      
+      // 刷新数据
+      await loadModels(currentSubscribe.id)
+      await loadAvailableModels(currentSubscribe.id)
+      
+      // 重置状态
+      setTransferSelectedModels([])
+      setModelForm({
+        maxUsage: 0,
+        enabled: '1' as '1' | '0',
+      })
+    } catch (error) {
+      toast.error('批量添加模型失败')
+    } finally {
+      setIsAddingModel(false)
+    }
+  }
+
+  // Model drag and drop handlers
+  const handleModelDragStart = (e: React.DragEvent, modelId: string) => {
+    setDraggedModelItem(modelId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleModelDragOver = (e: React.DragEvent, modelId: string) => {
+    e.preventDefault()
+    if (draggedModelItem !== modelId) {
+      setDragOverModelItem(modelId)
+    }
+  }
+
+  const handleModelDragLeave = () => {
+    setDragOverModelItem(null)
+  }
+
+  const handleModelDrop = async (e: React.DragEvent, targetModelId: string) => {
+    e.preventDefault()
+    setDragOverModelItem(null)
+    
+    if (!draggedModelItem || draggedModelItem === targetModelId || !currentSubscribe) {
+      setDraggedModelItem(null)
+      return
+    }
+
+    try {
+      const newModels = [...models]
+      const draggedIndex = newModels.findIndex(m => m.id === draggedModelItem)
+      const targetIndex = newModels.findIndex(m => m.id === targetModelId)
+      
+      if (draggedIndex === -1 || targetIndex === -1) return
+      
+      const removed = newModels[draggedIndex]
+      if (!removed) return
+      
+      newModels.splice(draggedIndex, 1)
+      newModels.splice(targetIndex, 0, removed)
+      
+      // Update sort values for all models (larger sort value = higher position)
+      const totalCount = newModels.length
+      const updatedModels = newModels.map((model, index) => ({
+        ...model,
+        sortOrder: totalCount - index - 1
+      }))
+      
+      // Update all models' sort on server
+      await Promise.all(
+        updatedModels.map(model => 
+          subscribeModelService.updateSubscribeModel(model.id, { sortOrder: model.sortOrder })
+        )
+      )
+      
+      // Refresh models
+      await loadModels(currentSubscribe.id)
+      toast.success('模型排序已更新')
+    } catch (error) {
+      toast.error('模型排序更新失败')
+      // Refresh models to reset state
+      await loadModels(currentSubscribe.id)
+    } finally {
+      setDraggedModelItem(null)
+    }
+  }
+
   const handleUpdateModel = async (model: SubscribeModel) => {
     try {
       await subscribeModelService.updateSubscribeModel(model.id, {
@@ -280,6 +394,31 @@ function SubscribesPage() {
     } catch (error) {
       toast.error('删除模型失败')
     }
+  }
+
+  const handleUpdateMaxUsage = async (model: SubscribeModel) => {
+    if (!editingModel || editingModel.id !== model.id) return
+
+    try {
+      setIsUpdatingModel(true)
+      await subscribeModelService.updateSubscribeModel(model.id, {
+        maxUsage: editingMaxUsage
+      })
+      toast.success('最大使用次数更新成功')
+      await loadModels(model.subscribeId)
+    } catch (error) {
+      console.error('Update max usage error:', error)
+      toast.error('更新最大使用次数失败')
+    } finally {
+      setIsUpdatingModel(false)
+      setEditingModel(null)
+      setEditingMaxUsage(0)
+    }
+  }
+
+  const cancelEditMaxUsage = () => {
+    setEditingModel(null)
+    setEditingMaxUsage(0)
   }
 
   const totalPages = Math.ceil(total / pageSize)
@@ -468,7 +607,7 @@ function SubscribesPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className='max-w-lg' >
+        <DialogContent className='max-w-7xl' >
           <DialogHeader>
             <DialogTitle>{editingSubscribe ? '编辑套餐' : '新建套餐'}</DialogTitle>
             <DialogDescription>
@@ -636,109 +775,90 @@ function SubscribesPage() {
 
       {/* Model Config Dialog */}
       <Dialog open={isModelConfigOpen} onOpenChange={setIsModelConfigOpen}>
-        <DialogContent className='max-w-3xl'>
-          <DialogHeader>
+        <DialogContent className='sm:max-w-[39rem] max-h-[90vh] overflow-y-auto'>
+          <DialogHeader className='mb-2'>
             <DialogTitle>模型配置 - {currentSubscribe?.name}</DialogTitle>
             <DialogDescription>
               为套餐配置可用的AI模型及使用额度
             </DialogDescription>
           </DialogHeader>
           
-          {/* Add Model Section */}
-          <div className='border-b pb-4 mb-4'>
-            <h4 className='font-medium mb-3'>添加模型</h4>
-            <div className='grid grid-cols-2 gap-4'>
-              <div className='grid gap-2'>
-                <Label htmlFor='model-select'>选择模型</Label>
-                <Select
-                  value={selectedModelId}
-                  onValueChange={setSelectedModelId}
-                >
-                  <SelectTrigger className='w-full'>
-                    <SelectValue placeholder='选择模型' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(() => {
-                      // Group models by provider
-                      const grouped = availableModels.reduce<Record<string, typeof availableModels>>((acc, item) => {
-                        const providerName = item.provider.name || '未知提供商'
-                        if (!acc[providerName]) {
-                          acc[providerName] = []
-                        }
-                        acc[providerName].push(item)
-                        return acc
-                      }, {})
-                      
-                      return Object.entries(grouped).map(([providerName, providerModels]) => (
-                        <div key={providerName}>
-                          <div className='px-2 py-1.5 text-sm font-semibold text-muted-foreground bg-muted/50'>
-                            {providerName}
-                          </div>
-                          {providerModels.map((item: typeof availableModels[0]) => (
-                            <SelectItem key={item.model.id} value={item.model.id}>
-                              {item.model.name}
-                            </SelectItem>
-                          ))}
-                        </div>
-                      ))
-                    })()}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className='grid gap-2'>
-                <Label htmlFor='max-usage'>最大使用次数</Label>
-                <Input
-                  id='max-usage'
-                  type='number'
-                  value={modelForm.maxUsage}
-                  onChange={(e) => setModelForm({ ...modelForm, maxUsage: Number(e.target.value) })}
-                  placeholder='0表示无限制'
-                  className='w-full'
-                />
+          {/* Model Transfer Section */}
+          <div className='border-b pb-2 mb-2'>
+            <div className='mb-4 space-y-2'>
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='grid gap-2'>
+                  <Label htmlFor='max-usage'>最大使用次数</Label>
+                  <Input
+                    id='max-usage'
+                    type='number'
+                    value={modelForm.maxUsage}
+                    onChange={(e) => setModelForm({ ...modelForm, maxUsage: Number(e.target.value) })}
+                    placeholder='0表示无限制'
+                    className='w-full'
+                  />
+                </div>
+                <div className='grid gap-2'>
+                  <Label htmlFor='enabled'>状态</Label>
+                  <Select
+                    value={modelForm.enabled.toString()}
+                    onValueChange={(value: '1' | '0') => setModelForm({ ...modelForm, enabled: value })}
+                  >
+                    <SelectTrigger className='w-full'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='1'>启用</SelectItem>
+                      <SelectItem value='0'>禁用</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-            <div className='grid grid-cols-2 gap-4 mt-4'>
-              <div className='grid gap-2'>
-                <Label htmlFor='enabled'>状态</Label>
-                <Select
-                  value={modelForm.enabled.toString()}
-                  onValueChange={(value: '1' | '0') => setModelForm({ ...modelForm, enabled: value })}
-                >
-                  <SelectTrigger className='w-full'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='1'>启用</SelectItem>
-                    <SelectItem value='0'>禁用</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className='grid gap-2'>
-                <Label htmlFor='sort-order'>排序</Label>
-                <Input
-                  id='sort-order'
-                  type='number'
-                  value={modelForm.sortOrder}
-                  onChange={(e) => setModelForm({ ...modelForm, sortOrder: Number(e.target.value) })}
-                  className='w-full'
-                />
-              </div>
-            </div>
-            <div className='mt-4'>
-              <Button onClick={handleAddModel} disabled={isAddingModel || !selectedModelId}>
-                {isAddingModel ? (
-                  <Loader2 size={16} className='mr-2 animate-spin' />
-                ) : (
-                  <PlusIcon size={16} className='mr-2' />
-                )}
-                添加模型
-              </Button>
-            </div>
+            
+            <Transfer
+              data={availableModels.map(item => ({
+                id: item.model.id,
+                name: item.model.name,
+                provider: item.provider.name || '未知提供商',
+                type: item.model.type
+              }))}
+              value={transferSelectedModels}
+              onChange={setTransferSelectedModels}
+              renderItem={(item) => (
+                <div className='flex items-center'>
+                  {item.type === 'text2image' && (
+                    <Image size={14} className='text-blue-500 mr-2' />
+                  )}
+                  {item.type === 'text2video' && (
+                    <Video size={14} className='text-purple-500 mr-2' />
+                  )}
+                  <span className='text-sm'>{item.name}</span>
+                  <span className='text-xs text-muted-foreground ml-2'>- {item.provider}</span>
+                </div>
+              )}
+              searchable={false}
+            />
+            
           </div>
           
           {/* Models List */}
-          <div>
-            <h4 className='font-medium mb-3'>已配置模型</h4>
+          <div className='mt-1'>
+            <div className='flex items-center justify-between mb-3'>
+              <h4 className='font-medium'>已配置模型</h4>
+              <Button 
+                size='sm'
+                onClick={handleBatchAddModels} 
+                disabled={isAddingModel || transferSelectedModels.length === 0}
+              >
+                {isAddingModel ? (
+                  <Loader2 size={14} className='mr-2 animate-spin' />
+                ) : (
+                  <PlusIcon size={14} className='mr-2' />
+                )}
+                批量添加 {transferSelectedModels.length} 个模型
+              </Button>
+            </div>
             {isModelLoading ? (
               <div className='text-center py-8'>
                 <Loader2 className='h-6 w-6 animate-spin mx-auto' />
@@ -749,31 +869,85 @@ function SubscribesPage() {
               </div>
             ) : (
               <div className='space-y-3 max-h-[210px] overflow-y-auto pr-2'>
-                {models.map((model) => (
-                  <div key={model.id} className='border rounded-md p-4 flex items-center justify-between'>
-                    <div className='flex-1 min-w-0 mr-4 flex items-center gap-2'>
+                {models.sort((a, b) => (b.sortOrder || 0) - (a.sortOrder || 0)).map((model) => (
+                  <div
+                    key={model.id}
+                    draggable
+                    onDragStart={(e) => handleModelDragStart(e, model.id)}
+                    onDragOver={(e) => handleModelDragOver(e, model.id)}
+                    onDragLeave={handleModelDragLeave}
+                    onDrop={(e) => handleModelDrop(e, model.id)}
+                    className={cn(
+                      'border rounded-md p-2.5 flex items-center justify-between cursor-move',
+                      dragOverModelItem === model.id && 'border-t-2 border-primary',
+                      draggedModelItem === model.id && 'opacity-50'
+                    )}
+                  >
+                    <div className='flex-1 min-w-0 mr-3 flex items-center gap-1.5'>
+                      <GripVertical size={14} className='text-muted-foreground cursor-grab active:cursor-grabbing' />
                       {model.model?.type === 'text2image' ? (
-                        <ImageIcon size={16} className='text-blue-500 shrink-0' />
+                        <Image size={14} className='text-blue-500 shrink-0' />
                       ) : model.model?.type === 'text2video' ? (
-                        <Video size={16} className='text-purple-500 shrink-0' />
+                        <Video size={14} className='text-purple-500 shrink-0' />
                       ) : null}
-                      <h5 className='font-medium truncate'>
+                      <h5 className='font-medium text-sm truncate'>
                         {model.model?.provider?.name || '未知提供商'}/{model.model?.name}
                       </h5>
-                      <span className='text-sm text-muted-foreground shrink-0'>
-                        (限制次数：{model.maxUsage === 0 ? '无限制' : model.maxUsage})
-                      </span>
+                      {editingModel?.id === model.id ? (
+                        <div className='flex items-center gap-1'>
+                          <Input
+                            type='number'
+                            value={editingMaxUsage}
+                            onChange={(e) => setEditingMaxUsage(Number(e.target.value))}
+                            className='w-20 text-xs'
+                            placeholder='0'
+                          />
+                          <Button
+                            size='icon'
+                            variant='ghost'
+                            onClick={() => handleUpdateMaxUsage(model)}
+                            disabled={isUpdatingModel}
+                            className='h-6 w-6'
+                          >
+                            <Check size={12} className='text-green-600' />
+                          </Button>
+                          <Button
+                            size='icon'
+                            variant='ghost'
+                            onClick={cancelEditMaxUsage}
+                            className='h-6 w-6'
+                          >
+                            <X size={12} className='text-muted-foreground' />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className='text-xs text-muted-foreground shrink-0'>
+                          (限制次数：{model.maxUsage === 0 ? '无限制' : model.maxUsage})
+                        </span>
+                      )}
                     </div>
-                    <div className='flex items-center gap-2 shrink-0'>
-                      <span className={`px-2 py-1 rounded-full text-xs ${model.enabled === 1 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                    <div className='flex items-center gap-1.5 shrink-0'>
+                      <span className={`px-1.5 py-0.5 rounded-full text-xs ${model.enabled === 1 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                         {model.enabled === 1 ? '启用' : '禁用'}
                       </span>
                       <Button
                         size='icon'
                         variant='ghost'
-                        onClick={() => handleDeleteModel(model)}
+                        onClick={() => {
+                          setEditingModel(model)
+                          setEditingMaxUsage(model.maxUsage)
+                        }}
+                        className='h-8 w-8'
                       >
-                        <TrashIcon size={16} className='text-destructive' />
+                        <Pencil size={14} className='text-muted-foreground' />
+                      </Button>
+                      <Button
+                        size='icon'
+                        variant='ghost'
+                        onClick={() => handleDeleteModel(model)}
+                        className='h-8 w-8'
+                      >
+                        <TrashIcon size={14} className='text-destructive' />
                       </Button>
                     </div>
                   </div>

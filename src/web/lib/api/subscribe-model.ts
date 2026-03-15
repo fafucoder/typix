@@ -64,8 +64,16 @@ export const subscribeModelService = {
 
 	// Create subscribe model
 	createSubscribeModel: async (data: CreateSubscribeModelData): Promise<{ model: SubscribeModel }> => {
+		// Filter out undefined or null values
+		const filteredData = Object.entries(data).reduce((acc, [key, value]) => {
+			if (value !== undefined && value !== null) {
+				acc[key as keyof CreateSubscribeModelData] = value
+			}
+			return acc
+		}, {} as CreateSubscribeModelData)
+		
 		const response = await apiClient.api['subscribe-models'].$post({
-			json: data,
+			json: filteredData,
 		})
 		const result: ApiResponse<SubscribeModel> = await response.json()
 		if (!result.data) throw new Error(result.message || 'Failed to create subscribe model')
@@ -74,9 +82,17 @@ export const subscribeModelService = {
 
 	// Update subscribe model
 	updateSubscribeModel: async (id: string, data: UpdateSubscribeModelData): Promise<{ model: SubscribeModel }> => {
+		// Filter out undefined or null values
+		const filteredData = Object.entries(data).reduce((acc, [key, value]) => {
+			if (value !== undefined && value !== null) {
+				acc[key as keyof UpdateSubscribeModelData] = value
+			}
+			return acc
+		}, {} as UpdateSubscribeModelData)
+		
 		const response = await apiClient.api['subscribe-models'][':id'].$put({
 			param: { id },
-			json: data,
+			json: filteredData,
 		})
 		const result: ApiResponse<SubscribeModel> = await response.json()
 		if (!result.data) throw new Error(result.message || 'Failed to update subscribe model')
