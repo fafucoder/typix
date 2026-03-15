@@ -12,6 +12,7 @@ export const chats = mysqlTable("chats", {
 	provider: text("provider").notNull(), // Current AI provider for the chat
 	model: text("model").notNull(), // Current AI model for the chat
 	deleted: int("deleted").default(0), // 0=false, 1=true
+	type: varchar("type", { length: 10, enum: ["text2image", "text2video"] }).default("text2image").notNull(), // Chat type
 	createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
 	updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });

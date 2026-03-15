@@ -304,16 +304,38 @@ function ChatsPage() {
                             )}
                           >
                             <p className='text-sm whitespace-pre-wrap'>{message.content}</p>
-                            {message.generation && message.generation.fileIds && message.generation.fileIds.length > 0 && (
-                              <div className='mt-2 grid grid-cols-2 gap-2'>
-                                {message.generation.fileIds.map((fileId, index) => (
-                                  <img
-                                    key={index}
-                                    src={`/api/files/${fileId}`}
-                                    alt={`Generated ${index + 1}`}
-                                    className='rounded-md border'
-                                  />
-                                ))}
+                            {/* Display generated images based on message type */}
+                            {message.type === 'image' && message.generation && message.generation.resultUrls && message.generation.resultUrls.length > 0 && (
+                              <div className='mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2'>
+                                {message.generation.resultUrls.map((url, index) => {
+                                  if (!url) return null;
+                                  return (
+                                    <img
+                                      key={index}
+                                      src={url}
+                                      alt={`Generated ${index + 1}`}
+                                      className='rounded-md border aspect-square h-auto w-full object-cover shadow-lg'
+                                      loading='lazy'
+                                    />
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {/* Display generated videos based on message type */}
+                            {message.type === 'video' && message.generation && message.generation.resultUrls && message.generation.resultUrls.length > 0 && (
+                              <div className='mt-2'>
+                                {message.generation.resultUrls.map((url, index) => {
+                                  if (!url) return null;
+                                  return (
+                                    <video
+                                      key={index}
+                                      src={url}
+                                      controls
+                                      className='rounded-md border aspect-video h-auto w-full object-cover shadow-lg'
+                                      preload='metadata'
+                                    />
+                                  );
+                                })}
                               </div>
                             )}
                             {message.generation && message.generation.status === 'failed' && (

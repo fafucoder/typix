@@ -6,6 +6,7 @@ export interface Chat {
   userId: string
   provider: string
   model: string
+  type: string
   createdAt: string
   updatedAt: string
   user?: {
@@ -20,13 +21,14 @@ export interface Message {
   chatId: string
   content: string
   role: 'user' | 'assistant'
-  type: 'text' | 'image'
+  type: string
   createdAt: string
   updatedAt: string
   generation?: {
     id: string
     status: string
     fileIds?: string[]
+    resultUrls?: string[]
     errorReason?: string
   }
 }

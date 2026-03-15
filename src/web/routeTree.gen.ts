@@ -27,7 +27,6 @@ import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedSubscribesIndexRouteImport } from './routes/_authenticated/subscribes/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedOrdersIndexRouteImport } from './routes/_authenticated/orders/index'
-import { Route as AuthenticatedCreationsIndexRouteImport } from './routes/_authenticated/creations/index'
 import { Route as AuthenticatedCouponsIndexRouteImport } from './routes/_authenticated/coupons/index'
 import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats/index'
 import { Route as AuthenticatedAiProvidersIndexRouteImport } from './routes/_authenticated/ai-providers/index'
@@ -129,12 +128,6 @@ const AuthenticatedOrdersIndexRoute =
     path: '/orders/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedCreationsIndexRoute =
-  AuthenticatedCreationsIndexRouteImport.update({
-    id: '/creations/',
-    path: '/creations/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedCouponsIndexRoute =
   AuthenticatedCouponsIndexRouteImport.update({
     id: '/coupons/',
@@ -208,7 +201,6 @@ export interface FileRoutesByFullPath {
   '/ai-providers/': typeof AuthenticatedAiProvidersIndexRoute
   '/chats/': typeof AuthenticatedChatsIndexRoute
   '/coupons/': typeof AuthenticatedCouponsIndexRoute
-  '/creations/': typeof AuthenticatedCreationsIndexRoute
   '/orders/': typeof AuthenticatedOrdersIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/subscribes/': typeof AuthenticatedSubscribesIndexRoute
@@ -234,7 +226,6 @@ export interface FileRoutesByTo {
   '/ai-providers': typeof AuthenticatedAiProvidersIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
   '/coupons': typeof AuthenticatedCouponsIndexRoute
-  '/creations': typeof AuthenticatedCreationsIndexRoute
   '/orders': typeof AuthenticatedOrdersIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/subscribes': typeof AuthenticatedSubscribesIndexRoute
@@ -265,7 +256,6 @@ export interface FileRoutesById {
   '/_authenticated/ai-providers/': typeof AuthenticatedAiProvidersIndexRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
   '/_authenticated/coupons/': typeof AuthenticatedCouponsIndexRoute
-  '/_authenticated/creations/': typeof AuthenticatedCreationsIndexRoute
   '/_authenticated/orders/': typeof AuthenticatedOrdersIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/subscribes/': typeof AuthenticatedSubscribesIndexRoute
@@ -294,7 +284,6 @@ export interface FileRouteTypes {
     | '/ai-providers/'
     | '/chats/'
     | '/coupons/'
-    | '/creations/'
     | '/orders/'
     | '/settings/'
     | '/subscribes/'
@@ -320,7 +309,6 @@ export interface FileRouteTypes {
     | '/ai-providers'
     | '/chats'
     | '/coupons'
-    | '/creations'
     | '/orders'
     | '/settings'
     | '/subscribes'
@@ -350,7 +338,6 @@ export interface FileRouteTypes {
     | '/_authenticated/ai-providers/'
     | '/_authenticated/chats/'
     | '/_authenticated/coupons/'
-    | '/_authenticated/creations/'
     | '/_authenticated/orders/'
     | '/_authenticated/settings/'
     | '/_authenticated/subscribes/'
@@ -498,13 +485,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOrdersIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/creations/': {
-      id: '/_authenticated/creations/'
-      path: '/creations'
-      fullPath: '/creations/'
-      preLoaderRoute: typeof AuthenticatedCreationsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/coupons/': {
       id: '/_authenticated/coupons/'
       path: '/coupons'
@@ -596,7 +576,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAiProvidersIndexRoute: typeof AuthenticatedAiProvidersIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
   AuthenticatedCouponsIndexRoute: typeof AuthenticatedCouponsIndexRoute
-  AuthenticatedCreationsIndexRoute: typeof AuthenticatedCreationsIndexRoute
   AuthenticatedOrdersIndexRoute: typeof AuthenticatedOrdersIndexRoute
   AuthenticatedSubscribesIndexRoute: typeof AuthenticatedSubscribesIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
@@ -609,7 +588,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAiProvidersIndexRoute: AuthenticatedAiProvidersIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
   AuthenticatedCouponsIndexRoute: AuthenticatedCouponsIndexRoute,
-  AuthenticatedCreationsIndexRoute: AuthenticatedCreationsIndexRoute,
   AuthenticatedOrdersIndexRoute: AuthenticatedOrdersIndexRoute,
   AuthenticatedSubscribesIndexRoute: AuthenticatedSubscribesIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,

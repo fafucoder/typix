@@ -154,7 +154,13 @@ export const chatService = {
 				user: userResults.length > 0 ? userResults[0] : undefined,
 			};
 
-			const messageResults = await db.select().from(messages).where(eq(messages.chatId, id)).orderBy(desc(messages.createdAt));
+			const messageResults = await db.select().from(messages)
+				.where(eq(messages.chatId, id))
+				.orderBy(
+					desc(messages.createdAt),
+					sql`CASE WHEN ${messages.role} = 'user' THEN 0 ELSE 1 END`,
+					messages.id
+				);
 
 			const generationIds = messageResults.filter(m => m.generationId).map(m => m.generationId!);
 			const generationResults = generationIds.length > 0
